@@ -1,0 +1,7 @@
+{
+  "name": "school-erp",
+  "private": true,
+  "workspaces": ["backend", "web", "app"],
+  "version": "1.0.0",
+  "license": "ISC"
+}
