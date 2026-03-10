@@ -2,19 +2,35 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./src/config/db.js";
+import seedRoles from "./src/config/seedRoles.js";
+import seedAdmin from "./src/config/seedAdmin.js";
+import authRoutes from "./src/routes/authRoutes.js";
+import adminRoutes from "./src/routes/adminRoutes.js";
+import studentRoutes from "./src/routes/studentRoutes.js";
 
 dotenv.config();
-connectDB();
 
-const app = express();
+const startServer = async () => {
+  await connectDB();
+  await seedRoles();
+  await seedAdmin();
 
-app.use(cors());
-app.use(express.json());
+  const app = express();
 
-app.get("/", (req, res) => {
-  res.send("School ERP API Running");
-});
+  app.use(cors());
+  app.use(express.json());
 
-app.listen(process.env.PORT, () =>
-  console.log(`Server running on port ${process.env.PORT}`)
-);
+  app.get("/", (req, res) => {
+    res.send("School ERP API Running");
+  });
+
+  app.use("/api/auth", authRoutes);
+  app.use("/api/admin", adminRoutes);
+  app.use("/api/student", studentRoutes);
+
+  app.listen(process.env.PORT, () =>
+    console.log(`Server running on port ${process.env.PORT}`)
+  );
+};
+
+startServer();
