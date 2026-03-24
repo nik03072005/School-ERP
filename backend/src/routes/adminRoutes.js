@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  createUser,
   getAllUsers,
   getPendingUsers,
   getUserById,
@@ -10,6 +11,8 @@ import {
   deleteUser,
   getPendingAdmissions,
   getStudentAdmission,
+  getStudentAdmissionByUser,
+  upsertStudentAdmission,
   approveAdmission,
   rejectAdmission,
 } from "../controllers/adminController.js";
@@ -21,6 +24,7 @@ const router = express.Router();
 router.use(protect, authorize("admin"));
 
 // User account routes
+router.post("/users", createUser);
 router.get("/users", getAllUsers);
 router.get("/users/pending", getPendingUsers);
 router.get("/users/:id", getUserById);
@@ -32,7 +36,9 @@ router.delete("/users/:id", deleteUser);
 
 // Admission form routes
 router.get("/admissions/pending", getPendingAdmissions);
+router.get("/admissions/by-user/:userId", getStudentAdmissionByUser);
 router.get("/admissions/:studentId", getStudentAdmission);
+router.put("/admissions/:studentId", upsertStudentAdmission);
 router.patch("/admissions/:studentId/approve", approveAdmission);
 router.patch("/admissions/:studentId/reject", rejectAdmission);
 

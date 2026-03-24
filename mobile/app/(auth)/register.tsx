@@ -60,7 +60,10 @@ export default function RegisterScreen() {
       router.replace('/(auth)/account-pending' as any);
     } catch (err: any) {
       const msg =
-        err?.response?.data?.message ?? 'Registration failed. Please try again.';
+        err?.response?.data?.message ??
+        (err?.request
+          ? 'Cannot reach server. Check API URL/network and try again.'
+          : 'Registration failed. Please try again.');
       Alert.alert('Registration Failed', msg);
     } finally {
       setLoading(false);

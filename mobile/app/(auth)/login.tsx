@@ -10,7 +10,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useRouter, Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
@@ -125,19 +125,17 @@ export default function LoginScreen() {
               }
             </TouchableOpacity>
 
-            {/* Register link */}
-            <View style={styles.registerRow}>
-              <Text style={styles.registerText}>Don&apos;t have an account? </Text>
-              <Link href={"/(auth)/register" as any} asChild>
+            <View style={styles.linksRow}>
+              <Link href={'/(auth)/forgot-password' as any} asChild>
                 <TouchableOpacity>
-                  <Text style={styles.registerLink}>Register</Text>
+                  <Text style={styles.forgotLink}>Forgot Password?</Text>
                 </TouchableOpacity>
               </Link>
             </View>
           </View>
 
           {/* Footer note */}
-          <Text style={styles.footer}>New accounts require admin approval</Text>
+          <Text style={styles.footer}>Contact admin to create your account</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -249,9 +247,8 @@ const styles = StyleSheet.create({
   btnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   // Links
-  registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  registerText: { color: Colors.textSecondary, fontSize: 14 },
-  registerLink: { color: Brand.blueDark, fontWeight: '700', fontSize: 14 },
+  linksRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  forgotLink: { color: Brand.blueDark, fontSize: 14, fontWeight: '700' },
 
   footer: {
     textAlign: 'center',

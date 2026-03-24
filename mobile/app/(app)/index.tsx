@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +23,10 @@ const BASE_FEATURES = [
 
 const ADMIN_FEATURES = [
   { title: 'User Management', subtitle: 'Approve & manage users', icon: 'people-outline', route: '/features/user-management' },
+] as const;
+
+const STUDENT_FEATURES = [
+  { title: 'Admission Details', subtitle: 'View your admission record', icon: 'document-text-outline', route: '/features/admission-form' },
 ] as const;
 
 // ─── Role labels ──────────────────────────────────────────────────────────────
@@ -57,101 +60,9 @@ export default function DashboardScreen() {
   const roleColor = ROLE_COLORS[user.role] ?? ROLE_COLORS.student;
   const features = user.role === 'admin'
     ? [...BASE_FEATURES, ...ADMIN_FEATURES]
-    : BASE_FEATURES;
-
-  // ── Student admission gate ─────────────────────────────────────────────────
-  if (user.role === 'student' && user.admission_status !== 'approved') {
-    const admStatus = user.admission_status ?? 'not_submitted';
-
-    const gateConfig = {
-      not_submitted: {
-        icon: 'document-text-outline' as const,
-        iconColor: Brand.blueDark,
-        iconBg: Brand.blueLight,
-        title: 'Complete Your Admission',
-        subtitle: 'You need to fill out the student admission form before accessing your dashboard.',
-        btnLabel: 'Fill Admission Form',
-        btnColor: Brand.blueDark,
-        btnAction: () => router.push('/features/admission-form' as any),
-      },
-      pending: {
-        icon: 'hourglass-outline' as const,
-        iconColor: Colors.warning,
-        iconBg: Colors.warningBg,
-        title: 'Admission Under Review',
-        subtitle: 'Your admission form has been submitted and is awaiting approval from the admin. You will be notified once reviewed.',
-        btnLabel: null,
-        btnColor: '',
-        btnAction: () => {},
-      },
-      rejected: {
-        icon: 'close-circle-outline' as const,
-        iconColor: Colors.error,
-        iconBg: Colors.errorBg,
-        title: 'Admission Not Approved',
-        subtitle: 'Your admission form was not approved. Please review the details and resubmit.',
-        btnLabel: 'Edit & Resubmit',
-        btnColor: Colors.error,
-        btnAction: () => router.push('/features/admission-form' as any),
-      },
-    }[admStatus] ?? {
-      icon: 'document-text-outline' as const,
-      iconColor: Brand.blueDark,
-      iconBg: Brand.blueLight,
-      title: 'Complete Your Admission',
-      subtitle: 'Please fill the admission form.',
-      btnLabel: 'Fill Admission Form',
-      btnColor: Brand.blueDark,
-      btnAction: () => router.push('/features/admission-form' as any),
-    };
-
-    return (
-      <SafeAreaView style={styles.safe}>
-        {/* Mini header */}
-        <View style={[styles.topBar, { paddingBottom: 16 }]}>
-          <View style={styles.topBarLeft}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{user.first_name[0]}{user.last_name[0]}</Text>
-            </View>
-            <View>
-              <Text style={styles.greeting}>{greeting()},</Text>
-              <Text style={styles.userName}>{user.first_name} {user.last_name}</Text>
-            </View>
-          </View>
-          <View style={[styles.roleBadge, { backgroundColor: roleColor.bg }]}>
-            <Text style={[styles.roleText, { color: roleColor.text }]}>{ROLE_LABELS[user.role]}</Text>
-          </View>
-        </View>
-
-        {/* Gate content */}
-        <View style={styles.gateContainer}>
-          <View style={[styles.gateIconCircle, { backgroundColor: gateConfig.iconBg }]}>
-            <Ionicons name={gateConfig.icon} size={56} color={gateConfig.iconColor} />
-          </View>
-          <Text style={styles.gateTitle}>{gateConfig.title}</Text>
-          <Text style={styles.gateSubtitle}>{gateConfig.subtitle}</Text>
-
-          {gateConfig.btnLabel && (
-            <TouchableOpacity
-              style={[styles.gateBtn, { backgroundColor: gateConfig.btnColor }]}
-              onPress={gateConfig.btnAction}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="arrow-forward-circle-outline" size={20} color="#fff" />
-              <Text style={styles.gateBtnText}>{gateConfig.btnLabel}</Text>
-            </TouchableOpacity>
-          )}
-
-          {admStatus === 'pending' && (
-            <View style={styles.gatePendingBadge}>
-              <Ionicons name="time-outline" size={14} color={Colors.warning} />
-              <Text style={styles.gatePendingText}>Waiting for admin review…</Text>
-            </View>
-          )}
-        </View>
-      </SafeAreaView>
-    );
-  }
+    : user.role === 'student'
+      ? [...BASE_FEATURES, ...STUDENT_FEATURES]
+      : BASE_FEATURES;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -337,63 +248,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     lineHeight: 19,
-  },
-
-  // ── Admission gate ──────────────────────────────────────────────
-  gateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
-  },
-  gateIconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  gateTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  gateSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
-  gateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 28,
-    paddingVertical: 13,
-    borderRadius: Radius.lg,
-    marginTop: 8,
-  },
-  gateBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  gatePendingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.warningBg,
-    borderRadius: Radius.full,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  gatePendingText: {
-    fontSize: 13,
-    color: Colors.warning,
-    fontWeight: '600',
   },
 });

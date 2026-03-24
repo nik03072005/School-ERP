@@ -6,15 +6,6 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface RegisterPayload {
-  first_name: string;
-  last_name: string;
-  email: string;
-  password: string;
-  mobile?: string;
-  role: 'student' | 'teaching_staff' | 'non_teaching_staff';
-}
-
 // ─── Auth Service ─────────────────────────────────────────────────────────────
 export const authService = {
   login: async (payload: LoginPayload) => {
@@ -22,8 +13,8 @@ export const authService = {
     return res.data; // { token, user }
   },
 
-  register: async (payload: RegisterPayload) => {
-    const res = await API.post('/auth/register', payload);
+  forgotPassword: async (payload: { email: string; newPassword: string }) => {
+    const res = await API.post('/auth/forgot-password', payload);
     return res.data; // { message }
   },
 

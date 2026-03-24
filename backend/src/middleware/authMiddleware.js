@@ -21,15 +21,6 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "User not found" });
     }
 
-    if (user.status !== "approved") {
-      return res.status(403).json({
-        message:
-          user.status === "pending"
-            ? "Account pending admin approval"
-            : "Account has been rejected",
-      });
-    }
-
     if (!user.is_active) {
       return res.status(403).json({ message: "Account has been deactivated" });
     }

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { authService } from '@/src/api/authService';
-import type { LoginPayload, RegisterPayload } from '@/src/api/authService';
+import type { LoginPayload } from '@/src/api/authService';
 
 const TOKEN_KEY = 'school_erp_token';
 
@@ -24,7 +24,6 @@ interface AuthContextValue {
   loading: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -74,11 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (payload: RegisterPayload) => {
-    await authService.register(payload);
-    // Accounts start as "pending" — do not auto-login
-  };
-
   const refreshUser = async () => {
     if (!token) return;
     try {
@@ -90,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, register, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

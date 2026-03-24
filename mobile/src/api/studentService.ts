@@ -46,9 +46,4 @@ export const studentService = {
     const res = await API.get('/student/admission');
     return res.data;
   },
-
-  submitAdmissionForm: async (data: AdmissionFormData): Promise<{ message: string }> => {
-    const res = await API.post('/student/admission', data);
-    return res.data;
-  },
 };

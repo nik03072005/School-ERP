@@ -1,7 +1,5 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import Role from "../models/Role.js";
-import Staff from "../models/Staff.js";
 import Student from "../models/Student.js";
 
 const buildUserPayload = async (user) => {
@@ -27,58 +25,6 @@ const signToken = (id) =>
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-export const register = async (req, res) => {
-  let createdUser = null;
-
-  try {
-    const { first_name, last_name, email, password, mobile, role } = req.body;
-
-    if (!first_name || !last_name || !email || !password || !role) {
-      return res.status(400).json({ message: "Please provide all required fields" });
-    }
-
-    // Find role
-    const roleDoc = await Role.findOne({ name: role });
-    if (!roleDoc) {
-      return res.status(400).json({ message: `Invalid role: ${role}` });
-    }
-
-    // Admin accounts can only be created via seeder, not public registration
-    if (role === "admin") {
-      return res.status(403).json({ message: "Admin accounts cannot be self-registered" });
-    }
-
-    // Check for duplicate email
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({ message: "Email already registered" });
-    }
-
-    // Create user (password hashed via pre-save hook)
-    createdUser = await User.create({ first_name, last_name, email, password, mobile, role_id: roleDoc._id });
-
-    // Create corresponding profile
-    if (role === "teaching_staff" || role === "non_teaching_staff") {
-      await Staff.create({ user_id: createdUser._id });
-    } else if (role === "student") {
-      await Student.create({ user_id: createdUser._id });
-    }
-
-    res.status(201).json({
-      message: "Registration successful. Your account is pending admin approval.",
-    });
-  } catch (error) {
-    // Manual rollback: remove user if profile creation failed
-    if (createdUser) {
-      await User.deleteOne({ _id: createdUser._id }).catch(() => {});
-    }
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -98,14 +44,6 @@ export const login = async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    if (user.status === "pending") {
-      return res.status(403).json({ message: "Account pending admin approval" });
-    }
-
-    if (user.status === "rejected") {
-      return res.status(403).json({ message: "Account has been rejected" });
     }
 
     if (!user.is_active) {
@@ -170,6 +108,37 @@ export const changePassword = async (req, res) => {
     await user.save();
 
     res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Reset password using email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "Please provide email and new password" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({ message: "No account found for this email" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful. You can now sign in." });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

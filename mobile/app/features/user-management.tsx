@@ -6,6 +6,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -32,16 +33,25 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   not_submitted: { bg: Colors.border,     text: Colors.textSecondary },
 };
 
+const CREATE_ROLES = [
+  { label: 'Student', value: 'student' },
+  { label: 'Teaching Staff', value: 'teaching_staff' },
+  { label: 'Non-Teaching Staff', value: 'non_teaching_staff' },
+  { label: 'Admin', value: 'admin' },
+] as const;
+
 // â”€â”€â”€ Account approval card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function UserCard({
   user,
   onApprove,
   onReject,
+  onManageAdmission,
   actionLoading,
 }: {
   user: AdminUser;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onManageAdmission?: (id: string) => void;
   actionLoading: string | null;
 }) {
   const sc = STATUS_COLORS[user.status] ?? STATUS_COLORS.pending;
@@ -89,6 +99,17 @@ function UserCard({
             </>
           )}
         </View>
+      )}
+
+      {onManageAdmission && roleName === 'student' && (
+        <TouchableOpacity
+          style={[styles.btn, styles.btnView, { marginTop: 12 }]}
+          onPress={() => onManageAdmission(user._id)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="create-outline" size={15} color={Brand.blueDark} />
+          <Text style={[styles.btnText, { color: Brand.blueDark }]}>Manage Admission Form</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -156,6 +177,15 @@ export default function UserManagementScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    mobile: '',
+    password: '',
+    role: 'student' as 'student' | 'teaching_staff' | 'non_teaching_staff' | 'admin',
+  });
 
   useEffect(() => {
     if (user && user.role !== 'admin') router.replace('/(app)');
@@ -241,6 +271,51 @@ export default function UserManagementScreen() {
     { key: 'all', label: 'All Users' },
   ];
 
+  const handleCreateUser = async () => {
+    if (!createForm.first_name.trim() || !createForm.last_name.trim() || !createForm.email.trim() || !createForm.password) {
+      Alert.alert('Missing fields', 'First name, last name, email and password are required.');
+      return;
+    }
+
+    if (createForm.password.length < 6) {
+      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      await adminService.createUser({
+        first_name: createForm.first_name.trim(),
+        last_name: createForm.last_name.trim(),
+        email: createForm.email.trim().toLowerCase(),
+        password: createForm.password,
+        mobile: createForm.mobile.trim() || undefined,
+        role: createForm.role,
+      });
+
+      setCreateForm({
+        first_name: '',
+        last_name: '',
+        email: '',
+        mobile: '',
+        password: '',
+        role: 'student',
+      });
+
+      Alert.alert('Success', 'User created successfully.');
+      fetchData();
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ??
+        (err?.request
+          ? 'Cannot reach server right now. Please check internet/server and try again.'
+          : 'Could not create user.');
+      Alert.alert('Error', msg);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
@@ -250,8 +325,80 @@ export default function UserManagementScreen() {
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>User Management</Text>
-          <Text style={styles.headerSub}>Approve accounts & admissions</Text>
+          <Text style={styles.headerSub}>Create users and manage admissions</Text>
         </View>
+      </View>
+
+      <View style={styles.createCard}>
+        <Text style={styles.createTitle}>Create User</Text>
+        <View style={styles.rowInputs}>
+          <TextInput
+            style={[styles.input, styles.halfInput]}
+            placeholder="First name"
+            placeholderTextColor={Colors.placeholder}
+            value={createForm.first_name}
+            onChangeText={(v) => setCreateForm((p) => ({ ...p, first_name: v }))}
+          />
+          <TextInput
+            style={[styles.input, styles.halfInput]}
+            placeholder="Last name"
+            placeholderTextColor={Colors.placeholder}
+            value={createForm.last_name}
+            onChangeText={(v) => setCreateForm((p) => ({ ...p, last_name: v }))}
+          />
+        </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor={Colors.placeholder}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={createForm.email}
+          onChangeText={(v) => setCreateForm((p) => ({ ...p, email: v }))}
+        />
+        <View style={styles.rowInputs}>
+          <TextInput
+            style={[styles.input, styles.halfInput]}
+            placeholder="Mobile (optional)"
+            placeholderTextColor={Colors.placeholder}
+            keyboardType="phone-pad"
+            value={createForm.mobile}
+            onChangeText={(v) => setCreateForm((p) => ({ ...p, mobile: v }))}
+          />
+          <TextInput
+            style={[styles.input, styles.halfInput]}
+            placeholder="Password"
+            placeholderTextColor={Colors.placeholder}
+            secureTextEntry
+            value={createForm.password}
+            onChangeText={(v) => setCreateForm((p) => ({ ...p, password: v }))}
+          />
+        </View>
+
+        <View style={styles.rolePicker}>
+          {CREATE_ROLES.map((r) => (
+            <TouchableOpacity
+              key={r.value}
+              style={[styles.roleOption, createForm.role === r.value && styles.roleOptionActive]}
+              onPress={() => setCreateForm((p) => ({ ...p, role: r.value }))}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.roleOptionText, createForm.role === r.value && styles.roleOptionTextActive]}>
+                {r.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.createBtn, creating && { opacity: 0.7 }]}
+          onPress={handleCreateUser}
+          disabled={creating}
+          activeOpacity={0.8}
+        >
+          {creating ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="add-circle-outline" size={16} color="#fff" />}
+          <Text style={styles.createBtnText}>{creating ? 'Creating...' : 'Create User'}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -317,6 +464,7 @@ export default function UserManagementScreen() {
               user={item}
               onApprove={handleApprove}
               onReject={handleReject}
+              onManageAdmission={activeTab === 'all' ? (userId) => router.push(`/features/admission-form?studentUserId=${userId}` as any) : undefined}
               actionLoading={actionLoading}
             />
           )}
@@ -354,6 +502,54 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   headerSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
+
+  createCard: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.card,
+  },
+  createTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginBottom: 10 },
+  rowInputs: { flexDirection: 'row', gap: 8 },
+  halfInput: { flex: 1 },
+  input: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    color: Colors.textPrimary,
+    marginBottom: 8,
+    fontSize: 13,
+  },
+  rolePicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 10 },
+  roleOption: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: Colors.background,
+  },
+  roleOptionActive: { borderColor: Brand.blueDark, backgroundColor: Brand.blueLight },
+  roleOptionText: { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
+  roleOptionTextActive: { color: Brand.blueDark },
+  createBtn: {
+    marginTop: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Brand.blueDark,
+    borderRadius: Radius.md,
+    paddingVertical: 10,
+  },
+  createBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
   tabs: {
     flexDirection: 'row', marginHorizontal: 20,

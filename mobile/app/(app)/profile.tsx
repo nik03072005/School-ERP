@@ -65,6 +65,7 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Account Details</Text>
           {[
+            { label: 'Account ID', value: user.id, icon: 'finger-print-outline' },
             { label: 'Email', value: user.email, icon: 'mail-outline' },
             { label: 'Role', value: ROLE_LABELS[user.role] ?? user.role, icon: 'briefcase-outline' },
             { label: 'Status', value: status.label, icon: 'shield-checkmark-outline' },
