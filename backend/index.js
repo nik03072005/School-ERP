@@ -17,7 +17,13 @@ const startServer = async () => {
 
   const app = express();
 
-  app.use(cors());
+  const corsOrigin = process.env.CORS_ORIGIN || "https://erp.kidzgalaxy.org";
+  app.use(
+    cors({
+      origin: corsOrigin,
+      credentials: true,
+    })
+  );
   app.use(express.json());
 
   app.get("/", (req, res) => {
