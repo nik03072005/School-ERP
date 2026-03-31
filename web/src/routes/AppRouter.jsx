@@ -13,6 +13,7 @@ import StaffEditor from "../pages/admin/StaffEditor";
 import SchoolSetup from "../pages/admin/SchoolSetup";
 import AttendanceAdmin from "../pages/admin/AttendanceAdmin";
 import AttendanceAudit from "../pages/admin/AttendanceAudit";
+import StudentManagement from "../pages/admin/StudentManagement";
 import TeacherAttendance from "../pages/teacher/TeacherAttendance";
 
 function AppRouter() {
@@ -42,7 +43,12 @@ function AppRouter() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
-          <Route path="school-setup" element={<SchoolSetup />} />
+          <Route path="students" element={<StudentManagement />} />
+          <Route path="school-setup">
+            <Route index element={<Navigate to="class-section" replace />} />
+            <Route path="class-section" element={<SchoolSetup view="class-section" />} />
+            <Route path="operations" element={<SchoolSetup view="operations" />} />
+          </Route>
           <Route path="attendance" element={<AttendanceAdmin />} />
           <Route path="attendance-audit" element={<AttendanceAudit />} />
           <Route path="admissions/:studentId" element={<AdmissionDetail />} />

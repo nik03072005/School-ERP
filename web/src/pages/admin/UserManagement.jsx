@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { adminService } from "../../api/adminService";
 import { uploadAvatarToR2 } from "../../api/r2Upload";
@@ -82,6 +82,10 @@ function UserManagement() {
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortDir, setSortDir] = useState("desc");
   const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalItems: 0 });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const filterContentRef = useRef(null);
+  const [filterContentHeight, setFilterContentHeight] = useState("0px");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(filters.search.trim()), 300);
@@ -159,6 +163,29 @@ function UserManagement() {
     const timer = setTimeout(() => setNotice(""), 3000);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    if (!showCreateModal) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowCreateModal(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showCreateModal]);
+
+  useEffect(() => {
+    if (!filterContentRef.current) return;
+
+    if (showFilters) {
+      setFilterContentHeight(`${filterContentRef.current.scrollHeight}px`);
+    } else {
+      setFilterContentHeight("0px");
+    }
+  }, [showFilters, filters, tab]);
 
   const counts = useMemo(
     () => ({
@@ -247,6 +274,7 @@ function UserManagement() {
       setAvatarUploadStatus("idle");
       setAvatarUploadUrl("");
       setAvatarUploadError("");
+      setShowCreateModal(false);
       setNotice("User created successfully.");
       await loadData(true);
     } catch (err) {
@@ -352,77 +380,97 @@ function UserManagement() {
           <h2>User Management</h2>
           <p>Create users, approve accounts, and review admissions.</p>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={() => loadData(true)} disabled={refreshing}>
-          {refreshing ? "Refreshing..." : "Refresh"}
-        </button>
+        <div className="panel-actions">
+          <button
+            type="button"
+            className="btn btn-primary create-trigger"
+            onClick={() => setShowCreateModal(true)}
+            aria-label="Open create user form"
+          >
+            +
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={() => loadData(true)} disabled={refreshing}>
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {notice ? <p className="alert success">{notice}</p> : null}
       {error ? <p className="alert error">{error}</p> : null}
 
-      <article className="panel create-panel">
-        <h3>Create User</h3>
-        <form className="create-form" onSubmit={handleCreateUser}>
-          <div className="form-grid">
-            <label>
-              First Name
-              <input value={createForm.first_name} onChange={(e) => setCreateForm((p) => ({ ...p, first_name: e.target.value }))} />
-            </label>
-            <label>
-              Last Name
-              <input value={createForm.last_name} onChange={(e) => setCreateForm((p) => ({ ...p, last_name: e.target.value }))} />
-            </label>
-            <label>
-              Email
-              <input
-                type="email"
-                value={createForm.email}
-                onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
-              />
-            </label>
-            <label>
-              Mobile
-              <input value={createForm.mobile} onChange={(e) => setCreateForm((p) => ({ ...p, mobile: e.target.value }))} />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={createForm.password}
-                onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
-              />
-            </label>
-            <label>
-              Avatar (optional)
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarSelect}
-              />
-              {avatarUploadStatus === "uploading" ? <small>Uploading avatar...</small> : null}
-              {avatarUploadStatus === "uploaded" ? <small>Avatar uploaded successfully.</small> : null}
-              {avatarUploadStatus === "failed" ? <small>{avatarUploadError || "Avatar upload failed."}</small> : null}
-            </label>
-          </div>
+      {showCreateModal ? (
+        <div className="modal-backdrop" onClick={() => setShowCreateModal(false)}>
+          <article className="modal-card modal-card-lg create-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Create User</h3>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowCreateModal(false)}>Close</button>
+            </div>
+            <form className="create-form" onSubmit={handleCreateUser}>
+              <div className="form-grid">
+                <label>
+                  First Name
+                  <input value={createForm.first_name} onChange={(e) => setCreateForm((p) => ({ ...p, first_name: e.target.value }))} />
+                </label>
+                <label>
+                  Last Name
+                  <input value={createForm.last_name} onChange={(e) => setCreateForm((p) => ({ ...p, last_name: e.target.value }))} />
+                </label>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    value={createForm.email}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Mobile
+                  <input value={createForm.mobile} onChange={(e) => setCreateForm((p) => ({ ...p, mobile: e.target.value }))} />
+                </label>
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    value={createForm.password}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Avatar (optional)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarSelect}
+                  />
+                  {avatarUploadStatus === "uploading" ? <small>Uploading avatar...</small> : null}
+                  {avatarUploadStatus === "uploaded" ? <small>Avatar uploaded successfully.</small> : null}
+                  {avatarUploadStatus === "failed" ? <small>{avatarUploadError || "Avatar upload failed."}</small> : null}
+                </label>
+              </div>
 
-          <div className="role-picker">
-            {CREATE_ROLES.map((role) => (
-              <button
-                key={role.value}
-                type="button"
-                className={`role-option ${createForm.role === role.value ? "active" : ""}`}
-                onClick={() => setCreateForm((p) => ({ ...p, role: role.value }))}
-              >
-                {role.label}
-              </button>
-            ))}
-          </div>
+              <div className="role-picker">
+                {CREATE_ROLES.map((role) => (
+                  <button
+                    key={role.value}
+                    type="button"
+                    className={`role-option ${createForm.role === role.value ? "active" : ""}`}
+                    onClick={() => setCreateForm((p) => ({ ...p, role: role.value }))}
+                  >
+                    {role.label}
+                  </button>
+                ))}
+              </div>
 
-          <button type="submit" className="btn btn-primary" disabled={creating}>
-            {creating ? "Creating..." : "Create User"}
-          </button>
-        </form>
-      </article>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={creating}>
+                  {creating ? "Creating..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          </article>
+        </div>
+      ) : null}
 
       <div className="tab-strip">
         {TAB_OPTIONS.map((item) => (
@@ -442,57 +490,74 @@ function UserManagement() {
       </div>
 
       <article className="panel table-filters-panel">
-        <div className="table-filters-grid">
-          <label>
-            Search
-            <input
-              placeholder="Name, email, mobile"
-              value={filters.search}
-              onChange={(event) => handleFilterChange("search", event.target.value)}
-            />
-          </label>
-
-          <label>
-            Role
-            <select value={filters.role} onChange={(event) => handleFilterChange("role", event.target.value)}>
-              {FILTERED_ROLES.map((item) => (
-                <option key={item.value || "all"} value={item.value}>{item.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Status
-            <select value={filters.status} onChange={(event) => handleFilterChange("status", event.target.value)}>
-              {FILTERED_STATUS.map((item) => (
-                <option key={item.value || "all"} value={item.value}>{item.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Activity
-            <select value={filters.is_active} onChange={(event) => handleFilterChange("is_active", event.target.value)}>
-              {FILTERED_ACTIVE.map((item) => (
-                <option key={item.value || "all"} value={item.value}>{item.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Registered From
-            <input type="date" value={filters.created_from} onChange={(event) => handleFilterChange("created_from", event.target.value)} />
-          </label>
-
-          <label>
-            Registered To
-            <input type="date" value={filters.created_to} onChange={(event) => handleFilterChange("created_to", event.target.value)} />
-          </label>
+        <div className="table-filter-head">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setShowFilters((prev) => !prev)}
+            aria-expanded={showFilters}
+          >
+            {showFilters ? "Hide Filters" : "Show Filters"}
+          </button>
+          <span>{tab === "admissions" ? `${filteredAdmissions.length} admissions` : `${pagination.totalItems} users`} found</span>
         </div>
 
-        <div className="table-filter-actions">
-          <button type="button" className="btn btn-ghost" onClick={clearFilters}>Clear Filters</button>
-          <span>{tab === "admissions" ? `${filteredAdmissions.length} admissions` : `${pagination.totalItems} users`} found</span>
+        <div
+          ref={filterContentRef}
+          className={`table-filters-collapse ${showFilters ? "open" : ""}`}
+          style={{ maxHeight: filterContentHeight }}
+        >
+          <div className="table-filters-grid">
+            <label>
+              Search
+              <input
+                placeholder="Name, email, mobile"
+                value={filters.search}
+                onChange={(event) => handleFilterChange("search", event.target.value)}
+              />
+            </label>
+
+            <label>
+              Role
+              <select value={filters.role} onChange={(event) => handleFilterChange("role", event.target.value)}>
+                {FILTERED_ROLES.map((item) => (
+                  <option key={item.value || "all"} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Status
+              <select value={filters.status} onChange={(event) => handleFilterChange("status", event.target.value)}>
+                {FILTERED_STATUS.map((item) => (
+                  <option key={item.value || "all"} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Activity
+              <select value={filters.is_active} onChange={(event) => handleFilterChange("is_active", event.target.value)}>
+                {FILTERED_ACTIVE.map((item) => (
+                  <option key={item.value || "all"} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Registered From
+              <input type="date" value={filters.created_from} onChange={(event) => handleFilterChange("created_from", event.target.value)} />
+            </label>
+
+            <label>
+              Registered To
+              <input type="date" value={filters.created_to} onChange={(event) => handleFilterChange("created_to", event.target.value)} />
+            </label>
+          </div>
+
+          <div className="table-filter-actions">
+            <button type="button" className="btn btn-ghost" onClick={clearFilters}>Clear Filters</button>
+          </div>
         </div>
       </article>
 

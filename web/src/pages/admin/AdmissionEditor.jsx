@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { adminService } from "../../api/adminService";
 import { uploadAvatarToR2 } from "../../api/r2Upload";
+import { setupService } from "../../api/setupService";
 
 const RELATIONSHIP_OPTIONS = ["mother", "father", "other"];
 const GENDER_OPTIONS = ["male", "female", "other"];
@@ -60,6 +61,8 @@ function AdmissionEditor() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -71,11 +74,18 @@ function AdmissionEditor() {
 
       try {
         setLoading(true);
-        const { student } = await adminService.getStudentAdmissionByUser(userId);
+        const [admissionRes, classRes, sectionRes] = await Promise.all([
+          adminService.getStudentAdmissionByUser(userId),
+          setupService.listClasses({ is_active: true }),
+          setupService.listSections({ is_active: true }),
+        ]);
+        const { student } = admissionRes;
         setStudentId(student._id);
         setStudentName(`${student?.user_id?.first_name || ""} ${student?.user_id?.last_name || ""}`.trim());
         setAvatarUrl(student?.user_id?.avatar || "");
         setForm((prev) => ({ ...prev, ...student }));
+        setClasses(classRes.classes || []);
+        setSections(sectionRes.sections || []);
       } catch (err) {
         setError(err?.response?.data?.message || "Could not load admission form.");
       } finally {
@@ -97,6 +107,11 @@ function AdmissionEditor() {
 
     if (avatarFile && avatarUploadStatus === "failed") {
       setError("Avatar upload failed. Please select an image again.");
+      return;
+    }
+
+    if (!form.class_id || !form.section_id) {
+      setError("Please select class and section before saving admission.");
       return;
     }
 
@@ -144,6 +159,8 @@ function AdmissionEditor() {
 
   const relationshipWarning = form.primary_guardian_relationship && !RELATIONSHIP_OPTIONS.includes(form.primary_guardian_relationship);
   const genderWarning = form.gender && !GENDER_OPTIONS.includes(form.gender);
+  const selectedClassId = String(form.class_id || "");
+  const filteredSections = sections.filter((section) => String(section.class_id?._id || section.class_id || "") === selectedClassId);
 
   const handleAvatarSelect = async (event) => {
     const file = event.target.files?.[0] || null;
@@ -231,7 +248,54 @@ function AdmissionEditor() {
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Class Applying</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.class_applying || ""} onChange={(e) => setField("class_applying", e.target.value)} />
+              <select
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                value={form.class_applying || ""}
+                onChange={(e) => setField("class_applying", e.target.value)}
+              >
+                <option value="">Select class</option>
+                {classes.map((item) => (
+                  <option key={item._id} value={item.name}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="mb-1 block text-sm font-medium text-slate-700">Assign Class</span>
+              <select
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                value={form.class_id || ""}
+                onChange={(e) => {
+                  const nextClassId = e.target.value;
+                  setField("class_id", nextClassId);
+                  setField("class_applying", classes.find((item) => String(item._id) === String(nextClassId))?.name || "");
+                  setField("section_id", "");
+                }}
+              >
+                <option value="">Select class</option>
+                {classes.map((item) => (
+                  <option key={item._id} value={item._id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="mb-1 block text-sm font-medium text-slate-700">Assign Section</span>
+              <select
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                value={form.section_id || ""}
+                onChange={(e) => setField("section_id", e.target.value)}
+                disabled={!form.class_id}
+              >
+                <option value="">Select section</option>
+                {filteredSections.map((section) => (
+                  <option key={section._id} value={section._id}>
+                    {section.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Blood Group</span>

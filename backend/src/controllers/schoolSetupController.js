@@ -3,6 +3,7 @@ import Section from "../models/Section.js";
 import SchoolPeriod from "../models/SchoolPeriod.js";
 import User from "../models/User.js";
 import TeacherAssignment from "../models/TeacherAssignment.js";
+import TimetableEntry from "../models/TimetableEntry.js";
 
 const parseBool = (value) => {
   if (value === undefined || value === null || value === "") return undefined;
@@ -55,7 +56,10 @@ export const updateClass = async (req, res) => {
     if (payload.grade_level !== undefined) payload.grade_level = Number(payload.grade_level);
     if (payload.capacity !== undefined) payload.capacity = Number(payload.capacity);
 
-    const classDoc = await Class.findByIdAndUpdate(req.params.classId, payload, { new: true, runValidators: true });
+    const classDoc = await Class.findByIdAndUpdate(req.params.classId, payload, {
+      returnDocument: "after",
+      runValidators: true,
+    });
     if (!classDoc) return res.status(404).json({ message: "Class not found" });
 
     res.status(200).json({ message: "Class updated", class: classDoc });
@@ -132,7 +136,10 @@ export const updateSection = async (req, res) => {
 
     if (payload.name !== undefined) payload.name = String(payload.name).trim();
 
-    const section = await Section.findByIdAndUpdate(req.params.sectionId, payload, { new: true, runValidators: true })
+    const section = await Section.findByIdAndUpdate(req.params.sectionId, payload, {
+      returnDocument: "after",
+      runValidators: true,
+    })
       .populate("class_id", "name grade_level")
       .populate("class_teacher_user_id", "first_name last_name email");
 
@@ -163,7 +170,7 @@ export const assignClassTeacher = async (req, res) => {
     const section = await Section.findByIdAndUpdate(
       req.params.sectionId,
       { class_teacher_user_id },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     )
       .populate("class_id", "name grade_level")
       .populate("class_teacher_user_id", "first_name last_name email");
@@ -223,7 +230,10 @@ export const updatePeriod = async (req, res) => {
     if (payload.name !== undefined) payload.name = String(payload.name).trim();
     if (payload.period_number !== undefined) payload.period_number = Number(payload.period_number);
 
-    const period = await SchoolPeriod.findByIdAndUpdate(req.params.periodId, payload, { new: true, runValidators: true });
+    const period = await SchoolPeriod.findByIdAndUpdate(req.params.periodId, payload, {
+      returnDocument: "after",
+      runValidators: true,
+    });
     if (!period) return res.status(404).json({ message: "Period not found" });
 
     res.status(200).json({ message: "Period updated", period });
@@ -271,7 +281,7 @@ export const createTeacherAssignment = async (req, res) => {
         assigned_by_user_id: req.user._id,
         remarks: remarks ? String(remarks).trim() : "",
       },
-      { upsert: true, new: true, runValidators: true }
+      { upsert: true, returnDocument: "after", runValidators: true }
     )
       .populate("teacher_user_id", "first_name last_name email")
       .populate("class_id", "name grade_level")
@@ -311,11 +321,166 @@ export const deactivateTeacherAssignment = async (req, res) => {
     const assignment = await TeacherAssignment.findByIdAndUpdate(
       req.params.assignmentId,
       { is_active: false },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!assignment) return res.status(404).json({ message: "Assignment not found" });
     res.status(200).json({ message: "Assignment deactivated", assignment });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const createTimetableEntry = async (req, res) => {
+  try {
+    const {
+      class_id,
+      section_id,
+      period_id,
+      teacher_user_id,
+      day_of_week,
+      subject_name,
+      room,
+      is_active,
+    } = req.body;
+
+    if (!class_id || !section_id || !period_id || !teacher_user_id || !day_of_week) {
+      return res.status(400).json({
+        message: "class_id, section_id, period_id, teacher_user_id and day_of_week are required",
+      });
+    }
+
+    const classDoc = await Class.findById(class_id).select("_id");
+    if (!classDoc) return res.status(404).json({ message: "Class not found" });
+
+    const section = await Section.findById(section_id).select("class_id");
+    if (!section) return res.status(404).json({ message: "Section not found" });
+    if (String(section.class_id) !== String(class_id)) {
+      return res.status(400).json({ message: "section_id does not belong to class_id" });
+    }
+
+    const period = await SchoolPeriod.findById(period_id).select("_id");
+    if (!period) return res.status(404).json({ message: "Period not found" });
+
+    const teacher = await User.findById(teacher_user_id).populate("role_id", "name");
+    if (!teacher || teacher.role_id?.name !== "teaching_staff") {
+      return res.status(400).json({ message: "teacher_user_id must be a teaching_staff user" });
+    }
+
+    const normalizedDay = String(day_of_week).trim().toLowerCase();
+
+    const teacherConflict = await TimetableEntry.findOne({
+      teacher_user_id,
+      day_of_week: normalizedDay,
+      period_id,
+      is_active: true,
+      $or: [{ class_id: { $ne: class_id } }, { section_id: { $ne: section_id } }],
+    }).select("_id");
+
+    if (teacherConflict) {
+      return res.status(409).json({
+        message: "Teacher is already assigned to another class for this day and period",
+      });
+    }
+
+    const entry = await TimetableEntry.findOneAndUpdate(
+      { class_id, section_id, day_of_week: normalizedDay, period_id },
+      {
+        class_id,
+        section_id,
+        period_id,
+        teacher_user_id,
+        day_of_week: normalizedDay,
+        subject_name: subject_name ? String(subject_name).trim() : "",
+        room: room ? String(room).trim() : "",
+        is_active: is_active === undefined ? true : Boolean(is_active),
+        created_by_user_id: req.user._id,
+      },
+      { upsert: true, returnDocument: "after", runValidators: true }
+    )
+      .populate("class_id", "name grade_level")
+      .populate("section_id", "name")
+      .populate("period_id", "name period_number start_time end_time")
+      .populate("teacher_user_id", "first_name last_name email");
+
+    res.status(201).json({ message: "Timetable entry saved", entry });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Timetable slot already exists for selected class, section, day and period",
+      });
+    }
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const listTimetableEntries = async (req, res) => {
+  try {
+    const { class_id, section_id, period_id, teacher_user_id, day_of_week } = req.query;
+    const is_active = parseBool(req.query.is_active);
+
+    const filter = {};
+    if (class_id) filter.class_id = class_id;
+    if (section_id) filter.section_id = section_id;
+    if (period_id) filter.period_id = period_id;
+    if (teacher_user_id) filter.teacher_user_id = teacher_user_id;
+    if (day_of_week) filter.day_of_week = String(day_of_week).toLowerCase();
+    if (is_active !== undefined) filter.is_active = is_active;
+
+    const entries = await TimetableEntry.find(filter)
+      .populate("class_id", "name grade_level")
+      .populate("section_id", "name")
+      .populate("period_id", "name period_number start_time end_time")
+      .populate("teacher_user_id", "first_name last_name email")
+      .sort({ day_of_week: 1, createdAt: -1 });
+
+    res.status(200).json({ count: entries.length, entries });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const listTeacherTimetable = async (req, res) => {
+  try {
+    const { teacher_user_id, day_of_week, period_id } = req.query;
+    const is_active = parseBool(req.query.is_active);
+
+    const filter = {};
+    if (teacher_user_id) filter.teacher_user_id = teacher_user_id;
+    if (period_id) filter.period_id = period_id;
+    if (day_of_week) filter.day_of_week = String(day_of_week).toLowerCase();
+    if (is_active !== undefined) filter.is_active = is_active;
+
+    const entries = await TimetableEntry.find(filter)
+      .populate("class_id", "name grade_level")
+      .populate("section_id", "name")
+      .populate("period_id", "name period_number start_time end_time")
+      .populate("teacher_user_id", "first_name last_name email")
+      .sort({ createdAt: -1 });
+
+    const grouped = new Map();
+    entries.forEach((entry) => {
+      const teacherId = String(entry?.teacher_user_id?._id || "");
+      if (!teacherId) return;
+
+      if (!grouped.has(teacherId)) {
+        grouped.set(teacherId, {
+          teacher_user_id: entry.teacher_user_id,
+          entries: [],
+        });
+      }
+
+      grouped.get(teacherId).entries.push(entry);
+    });
+
+    const timetables = Array.from(grouped.values());
+
+    res.status(200).json({
+      count: entries.length,
+      teacherCount: timetables.length,
+      timetables,
+      entries,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

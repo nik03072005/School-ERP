@@ -13,6 +13,9 @@ import {
   createTeacherAssignment,
   listTeacherAssignments,
   deactivateTeacherAssignment,
+  createTimetableEntry,
+  listTimetableEntries,
+  listTeacherTimetable,
 } from "../controllers/schoolSetupController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -36,5 +39,9 @@ router.patch("/periods/:periodId", updatePeriod);
 router.post("/teacher-assignments", createTeacherAssignment);
 router.get("/teacher-assignments", listTeacherAssignments);
 router.patch("/teacher-assignments/:assignmentId/deactivate", deactivateTeacherAssignment);
+
+router.post("/timetable", createTimetableEntry);
+router.get("/timetable", listTimetableEntries);
+router.get("/timetable/teacher", listTeacherTimetable);
 
 export default router;

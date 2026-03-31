@@ -85,6 +85,67 @@
 		@apply mt-1 text-sm text-slate-500;
 	}
 
+	.school-setup-page {
+		@apply space-y-4;
+	}
+
+	.setup-hero-head {
+		@apply border-amber-100 bg-linear-to-r from-amber-50 via-white to-teal-50;
+	}
+
+	.setup-kicker {
+		@apply mb-2 rounded-full border border-amber-200 bg-amber-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-800;
+	}
+
+	.setup-refresh-btn {
+		@apply border-amber-200 bg-white/90 hover:bg-amber-50;
+	}
+
+	.setup-action-card {
+		@apply relative overflow-hidden border-amber-100 bg-linear-to-br from-white via-amber-50/40 to-teal-50/70;
+	}
+
+	.setup-action-card::after {
+		content: "";
+		@apply pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-amber-200/30 blur-2xl;
+	}
+
+	.setup-card-icon {
+		@apply mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-white text-amber-700 shadow-sm;
+	}
+
+	.setup-action-btn {
+		@apply h-10 rounded-xl px-4;
+	}
+
+	.setup-highlight-card {
+		@apply border-teal-200 from-teal-50/80 via-white to-amber-50;
+	}
+
+	.setup-highlight-card .setup-card-icon {
+		@apply border-teal-200 text-teal-700;
+	}
+
+	.setup-table-card {
+		@apply border-amber-100;
+	}
+
+	.setup-table-head {
+		@apply mb-2 flex items-center justify-between;
+	}
+
+	.setup-planner-shell {
+		@apply flex max-h-[94vh] w-screen max-w-none flex-col overflow-hidden rounded-none border border-amber-100 bg-linear-to-br from-[#fffdf5] via-[#f8fcff] to-[#effbf6] p-3 shadow-2xl sm:rounded-2xl sm:p-5;
+	}
+
+	.setup-planner-head {
+		@apply rounded-xl border border-amber-100 bg-white/70 px-3 py-2;
+	}
+
+	.panel-actions {
+		@apply flex items-center gap-2;
+	}
+
 	.page-center {
 		@apply flex min-h-screen items-center justify-center;
 	}
@@ -293,6 +354,10 @@
 		@apply mb-4 text-lg font-semibold text-slate-900;
 	}
 
+	.create-trigger {
+		@apply h-10 w-10 rounded-full px-0 text-lg leading-none;
+	}
+
 	.create-form {
 		@apply space-y-4;
 	}
@@ -351,6 +416,18 @@
 
 	.table-filters-panel {
 		@apply mb-4 space-y-4;
+	}
+
+	.table-filter-head {
+		@apply flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500;
+	}
+
+	.table-filters-collapse {
+		@apply overflow-hidden opacity-0 transition-all duration-300 ease-in-out;
+	}
+
+	.table-filters-collapse.open {
+		@apply opacity-100;
 	}
 
 	.table-filters-grid {
@@ -482,6 +559,18 @@
 		@apply w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl;
 	}
 
+	.modal-card.setup-planner-shell {
+		@apply max-h-[94vh] w-screen max-w-none flex-col overflow-hidden rounded-none border-amber-100 bg-linear-to-br from-[#fffdf5] via-[#f8fcff] to-[#effbf6] p-3 shadow-2xl sm:rounded-2xl sm:p-5;
+	}
+
+	.modal-card-lg {
+		@apply max-w-4xl;
+	}
+
+	.modal-head {
+		@apply mb-4 flex items-center justify-between gap-3;
+	}
+
 	.modal-card h3 {
 		@apply text-lg font-semibold text-slate-900;
 	}
@@ -493,4 +582,5 @@
 	.modal-actions {
 		@apply mt-4 flex justify-end gap-2;
 	}
+
 }

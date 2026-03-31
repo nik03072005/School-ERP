@@ -1,13 +1,31 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import {
+  BookCopy,
+  CalendarCheck2,
+  ClipboardList,
+  GraduationCap,
+  LayoutDashboard,
+  Settings2,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
-  { to: "/admin", end: true, label: "Overview" },
-  { to: "/admin/users", label: "User Management" },
-  { to: "/admin/school-setup", label: "School Setup" },
-  { to: "/admin/attendance", label: "Attendance Ops" },
-  { to: "/admin/attendance-audit", label: "Attendance Audit" },
+  { to: "/admin", end: true, label: "Overview", icon: LayoutDashboard },
+  { to: "/admin/users", label: "User Management", icon: Users },
+  { to: "/admin/students", label: "Students", icon: GraduationCap },
+  {
+    label: "School Setup",
+    icon: Settings2,
+    children: [
+      { to: "/admin/school-setup/class-section", label: "Class & Section", icon: BookCopy },
+      { to: "/admin/school-setup/operations", label: "Academic Operations", icon: ClipboardList },
+    ],
+  },
+  { to: "/admin/attendance", label: "Attendance Ops", icon: CalendarCheck2 },
+  { to: "/admin/attendance-audit", label: "Attendance Audit", icon: ShieldCheck },
 ];
 
 function AdminLayout() {
@@ -34,22 +52,61 @@ function AdminLayout() {
         </div>
 
         <nav className="mt-6 flex flex-col gap-2">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                [
-                  "rounded-xl px-3 py-2 text-sm font-medium transition",
-                  isActive ? "bg-cyan-50 text-cyan-700" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                ].join(" ")
-              }
-              onClick={() => setMenuOpen(false)}
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            if (item.children) {
+              const GroupIcon = item.icon;
+              return (
+                <div key={item.label} className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-2">
+                  <p className="mb-1 flex items-center gap-2 px-2 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <GroupIcon size={14} aria-hidden="true" />
+                    {item.label}
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {item.children.map((child) => {
+                      const ChildIcon = child.icon;
+                      return (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          className={({ isActive }) =>
+                            [
+                              "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition",
+                              isActive
+                                ? "bg-cyan-100 text-cyan-700"
+                                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                            ].join(" ")
+                          }
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          <ChildIcon size={15} aria-hidden="true" />
+                          <span>{child.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
+
+            const ItemIcon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  [
+                    "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
+                    isActive ? "bg-cyan-50 text-cyan-700" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                  ].join(" ")
+                }
+                onClick={() => setMenuOpen(false)}
+              >
+                <ItemIcon size={16} aria-hidden="true" />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
 
         <button

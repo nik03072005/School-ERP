@@ -65,4 +65,19 @@ export const setupService = {
     const response = await API.patch(`/setup/teacher-assignments/${assignmentId}/deactivate`);
     return response.data;
   },
+
+  createTimetableEntry: async (payload) => {
+    const response = await API.post("/setup/timetable", payload);
+    return response.data;
+  },
+
+  listTimetableEntries: async (params) => {
+    const response = await API.get("/setup/timetable", { params });
+    return response.data;
+  },
+
+  listTeacherTimetable: async (params) => {
+    const response = await API.get("/setup/timetable/teacher", { params });
+    return response.data;
+  },
 };

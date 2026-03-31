@@ -2,6 +2,8 @@ import User from "../models/User.js";
 import Staff from "../models/Staff.js";
 import Student from "../models/Student.js";
 import Role from "../models/Role.js";
+import Class from "../models/Class.js";
+import Section from "../models/Section.js";
 import TeachingProfile from "../models/TeachingProfile.js";
 import NonTeachingProfile from "../models/NonTeachingProfile.js";
 
@@ -161,7 +163,10 @@ const enrichUsersWithFormMeta = async (users) => {
   if (userIds.length === 0) return [];
 
   const [studentProfiles, staffProfiles] = await Promise.all([
-    Student.find({ user_id: { $in: userIds } }).select(["user_id", "admission_status", ...ADMISSION_FIELDS].join(" ")),
+    Student.find({ user_id: { $in: userIds } })
+      .select(["_id", "user_id", "admission_status", "class_id", "section_id", "class_applying", ...ADMISSION_FIELDS].join(" "))
+      .populate("class_id", "name grade_level")
+      .populate("section_id", "name"),
     Staff.find({ user_id: { $in: userIds } }).select("user_id staff_type employee_code designation department joining_date basic_salary bank_account_no bank_name"),
   ]);
 
@@ -193,6 +198,26 @@ const enrichUsersWithFormMeta = async (users) => {
     return {
       ...user,
       has_admission_form: isStudentFormFilled(studentProfile),
+      student_profile: studentProfile
+        ? {
+            _id: studentProfile._id,
+            admission_status: studentProfile.admission_status,
+            class_applying: studentProfile.class_applying,
+            class_id: studentProfile.class_id
+              ? {
+                  _id: studentProfile.class_id._id,
+                  name: studentProfile.class_id.name,
+                  grade_level: studentProfile.class_id.grade_level,
+                }
+              : null,
+            section_id: studentProfile.section_id
+              ? {
+                  _id: studentProfile.section_id._id,
+                  name: studentProfile.section_id.name,
+                }
+              : null,
+          }
+        : null,
       has_staff_details: hasStaffDetails,
     };
   });
@@ -575,12 +600,41 @@ export const upsertStudentAdmission = async (req, res) => {
     const student = await Student.findById(req.params.studentId);
     if (!student) return res.status(404).json({ message: "Student not found" });
 
+    const { class_id, section_id } = req.body;
+    if (!class_id || !section_id) {
+      return res.status(400).json({ message: "class_id and section_id are required before saving admission" });
+    }
+
+    const [assignedClass, assignedSection] = await Promise.all([
+      Class.findById(class_id).select("_id name"),
+      Section.findById(section_id).select("_id class_id name"),
+    ]);
+
+    if (!assignedClass) {
+      return res.status(400).json({ message: "Selected class is invalid" });
+    }
+
+    if (!assignedSection) {
+      return res.status(400).json({ message: "Selected section is invalid" });
+    }
+
+    if (String(assignedSection.class_id) !== String(assignedClass._id)) {
+      return res.status(400).json({ message: "Selected section does not belong to selected class" });
+    }
+
+    student.class_id = assignedClass._id;
+    student.section_id = assignedSection._id;
+
     ADMISSION_FIELDS.forEach((field) => {
       const val = req.body[field];
       if (val !== undefined && val !== null && val !== "") {
         student[field] = val;
       }
     });
+
+    if (!req.body.class_applying) {
+      student.class_applying = assignedClass.name;
+    }
 
     student.admission_status = req.body.admission_status || "approved";
     student.admission_submitted_at = student.admission_submitted_at || new Date();
