@@ -5,6 +5,9 @@ import { useAuth } from "../context/AuthContext";
 const NAV_ITEMS = [
   { to: "/admin", end: true, label: "Overview" },
   { to: "/admin/users", label: "User Management" },
+  { to: "/admin/school-setup", label: "School Setup" },
+  { to: "/admin/attendance", label: "Attendance Ops" },
+  { to: "/admin/attendance-audit", label: "Attendance Audit" },
 ];
 
 function AdminLayout() {

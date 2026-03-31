@@ -10,6 +10,10 @@ import UserManagement from "../pages/admin/UserManagement";
 import AdmissionDetail from "../pages/admin/AdmissionDetail";
 import AdmissionEditor from "../pages/admin/AdmissionEditor";
 import StaffEditor from "../pages/admin/StaffEditor";
+import SchoolSetup from "../pages/admin/SchoolSetup";
+import AttendanceAdmin from "../pages/admin/AttendanceAdmin";
+import AttendanceAudit from "../pages/admin/AttendanceAudit";
+import TeacherAttendance from "../pages/teacher/TeacherAttendance";
 
 function AppRouter() {
   return (
@@ -38,10 +42,22 @@ function AppRouter() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="school-setup" element={<SchoolSetup />} />
+          <Route path="attendance" element={<AttendanceAdmin />} />
+          <Route path="attendance-audit" element={<AttendanceAudit />} />
           <Route path="admissions/:studentId" element={<AdmissionDetail />} />
           <Route path="admissions/edit/:userId" element={<AdmissionEditor />} />
           <Route path="staff/edit/:userId" element={<StaffEditor />} />
         </Route>
+
+        <Route
+          path="/teacher/attendance"
+          element={
+            <ProtectedRoute>
+              <TeacherAttendance />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

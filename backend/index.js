@@ -8,6 +8,8 @@ import authRoutes from "./src/routes/authRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
 import studentRoutes from "./src/routes/studentRoutes.js";
 import uploadRoutes from "./src/routes/uploadRoutes.js";
+import schoolSetupRoutes from "./src/routes/schoolSetupRoutes.js";
+import attendanceRoutes from "./src/routes/attendanceRoutes.js";
 
 dotenv.config();
 
@@ -29,6 +31,8 @@ const startServer = async () => {
   app.use("/api/admin", adminRoutes);
   app.use("/api/student", studentRoutes);
   app.use("/api/uploads", uploadRoutes);
+  app.use("/api/setup", schoolSetupRoutes);
+  app.use("/api/attendance", attendanceRoutes);
 
   app.listen(process.env.PORT, () =>
     console.log(`Server running on port ${process.env.PORT}`)

@@ -2,6 +2,8 @@ import User from "../models/User.js";
 import Staff from "../models/Staff.js";
 import Student from "../models/Student.js";
 import Role from "../models/Role.js";
+import TeachingProfile from "../models/TeachingProfile.js";
+import NonTeachingProfile from "../models/NonTeachingProfile.js";
 
 const ADMISSION_FIELDS = [
   "gender", "date_of_birth", "class_applying", "blood_group", "aadhar_number",
@@ -28,7 +30,24 @@ const STAFF_FIELDS = [
   "basic_salary",
   "bank_account_no",
   "bank_name",
+  "staff_type",
   "is_active",
+];
+
+const TEACHING_PROFILE_FIELDS = [
+  "qualification",
+  "experience_years",
+  "subjects",
+  "classes_assigned",
+  "employee_notes",
+];
+
+const NON_TEACHING_PROFILE_FIELDS = [
+  "job_category",
+  "shift",
+  "reporting_manager",
+  "operational_permissions",
+  "employee_notes",
 ];
 
 const USER_SORT_FIELDS = {
@@ -48,6 +67,47 @@ const parseDate = (value) => {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const hasMeaningfulValue = (value) => {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value === "boolean") return value;
+  return true;
+};
+
+const isStudentFormFilled = (studentDoc) => {
+  if (!studentDoc) return false;
+  if (studentDoc.admission_status && studentDoc.admission_status !== "not_submitted") return true;
+  return ADMISSION_FIELDS.some((field) => hasMeaningfulValue(studentDoc[field]));
+};
+
+const hasCoreStaffDetails = (staffDoc) => {
+  if (!staffDoc) return false;
+  const coreFields = STAFF_FIELDS.filter((field) => field !== "is_active" && field !== "staff_type");
+  return coreFields.some((field) => hasMeaningfulValue(staffDoc[field]));
+};
+
+const hasTeachingDetails = (profileDoc) => {
+  if (!profileDoc) return false;
+  return TEACHING_PROFILE_FIELDS.some((field) => hasMeaningfulValue(profileDoc[field]));
+};
+
+const hasNonTeachingDetails = (profileDoc) => {
+  if (!profileDoc) return false;
+  return NON_TEACHING_PROFILE_FIELDS.some((field) => hasMeaningfulValue(profileDoc[field]));
+};
+
+const getStaffProfileByRole = async (roleName, staffId) => {
+  if (roleName === "teaching_staff") {
+    return TeachingProfile.findOne({ staff_id: staffId });
+  }
+  if (roleName === "non_teaching_staff") {
+    return NonTeachingProfile.findOne({ staff_id: staffId });
+  }
+  return null;
 };
 
 const buildUserFilter = async (query, forceStatus) => {
@@ -101,21 +161,39 @@ const enrichUsersWithFormMeta = async (users) => {
   if (userIds.length === 0) return [];
 
   const [studentProfiles, staffProfiles] = await Promise.all([
-    Student.find({ user_id: { $in: userIds } }).select("user_id"),
-    Staff.find({ user_id: { $in: userIds } }).select("user_id"),
+    Student.find({ user_id: { $in: userIds } }).select(["user_id", "admission_status", ...ADMISSION_FIELDS].join(" ")),
+    Staff.find({ user_id: { $in: userIds } }).select("user_id staff_type employee_code designation department joining_date basic_salary bank_account_no bank_name"),
   ]);
 
-  const studentIdSet = new Set(studentProfiles.map((entry) => String(entry.user_id)));
-  const staffIdSet = new Set(staffProfiles.map((entry) => String(entry.user_id)));
+  const staffIds = staffProfiles.map((entry) => entry._id);
+  const [teachingProfiles, nonTeachingProfiles] = await Promise.all([
+    TeachingProfile.find({ staff_id: { $in: staffIds } }).select(["staff_id", ...TEACHING_PROFILE_FIELDS].join(" ")),
+    NonTeachingProfile.find({ staff_id: { $in: staffIds } }).select(["staff_id", ...NON_TEACHING_PROFILE_FIELDS].join(" ")),
+  ]);
+
+  const studentMap = new Map(studentProfiles.map((entry) => [String(entry.user_id), entry]));
+  const staffMap = new Map(staffProfiles.map((entry) => [String(entry.user_id), entry]));
+  const teachingMap = new Map(teachingProfiles.map((entry) => [String(entry.staff_id), entry]));
+  const nonTeachingMap = new Map(nonTeachingProfiles.map((entry) => [String(entry.staff_id), entry]));
 
   return users.map((userDoc) => {
     const user = userDoc.toObject();
     const userId = String(user._id);
+    const studentProfile = studentMap.get(userId);
+    const staffProfile = staffMap.get(userId);
+
+    let hasStaffDetails = hasCoreStaffDetails(staffProfile);
+    if (staffProfile?.staff_type === "teaching_staff") {
+      hasStaffDetails = hasStaffDetails || hasTeachingDetails(teachingMap.get(String(staffProfile._id)));
+    }
+    if (staffProfile?.staff_type === "non_teaching_staff") {
+      hasStaffDetails = hasStaffDetails || hasNonTeachingDetails(nonTeachingMap.get(String(staffProfile._id)));
+    }
 
     return {
       ...user,
-      has_admission_form: studentIdSet.has(userId),
-      has_staff_details: staffIdSet.has(userId),
+      has_admission_form: isStudentFormFilled(studentProfile),
+      has_staff_details: hasStaffDetails,
     };
   });
 };
@@ -215,7 +293,7 @@ export const createUser = async (req, res) => {
     });
 
     if (role === "teaching_staff" || role === "non_teaching_staff") {
-      await Staff.create({ user_id: createdUser._id });
+      await Staff.create({ user_id: createdUser._id, staff_type: role });
     } else if (role === "student") {
       await Student.create({ user_id: createdUser._id });
     }
@@ -272,7 +350,9 @@ export const getUserById = async (req, res) => {
     let profile = null;
     const roleName = user.role_id?.name;
     if (roleName === "teaching_staff" || roleName === "non_teaching_staff") {
-      profile = await Staff.findOne({ user_id: user._id });
+      const staff = await Staff.findOne({ user_id: user._id });
+      const staffProfile = staff ? await getStaffProfileByRole(roleName, staff._id) : null;
+      profile = { staff, staff_profile: staffProfile };
     } else if (roleName === "student") {
       profile = await Student.findOne({ user_id: user._id });
     }
@@ -382,7 +462,14 @@ export const deleteUser = async (req, res) => {
 
     // Delete associated profile first, then the user
     if (roleName === "teaching_staff" || roleName === "non_teaching_staff") {
-      await Staff.deleteOne({ user_id: user._id });
+      const staff = await Staff.findOne({ user_id: user._id }).select("_id");
+      if (staff) {
+        await Promise.all([
+          TeachingProfile.deleteOne({ staff_id: staff._id }),
+          NonTeachingProfile.deleteOne({ staff_id: staff._id }),
+          Staff.deleteOne({ _id: staff._id }),
+        ]);
+      }
     } else if (roleName === "student") {
       await Student.deleteOne({ user_id: user._id });
     }
@@ -573,11 +660,16 @@ export const getStaffByUser = async (req, res) => {
     }
 
     const staff = await Staff.findOne({ user_id: user._id });
+    const staffProfile = staff ? await getStaffProfileByRole(roleName, staff._id) : null;
+    const hasProfileDetails = roleName === "teaching_staff"
+      ? hasTeachingDetails(staffProfile)
+      : hasNonTeachingDetails(staffProfile);
 
     res.status(200).json({
       user,
       staff,
-      has_staff_details: Boolean(staff),
+      staff_profile: staffProfile,
+      has_staff_details: hasCoreStaffDetails(staff) || hasProfileDetails,
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -603,7 +695,9 @@ export const upsertStaffByUser = async (req, res) => {
 
     let staff = await Staff.findOne({ user_id: user._id });
     if (!staff) {
-      staff = new Staff({ user_id: user._id });
+      staff = new Staff({ user_id: user._id, staff_type: roleName });
+    } else {
+      staff.staff_type = roleName;
     }
 
     STAFF_FIELDS.forEach((field) => {
@@ -632,9 +726,51 @@ export const upsertStaffByUser = async (req, res) => {
 
     await staff.save();
 
+    let staffProfile = await getStaffProfileByRole(roleName, staff._id);
+    if (!staffProfile) {
+      staffProfile = roleName === "teaching_staff"
+        ? new TeachingProfile({ staff_id: staff._id })
+        : new NonTeachingProfile({ staff_id: staff._id });
+    }
+
+    const profileFields = roleName === "teaching_staff" ? TEACHING_PROFILE_FIELDS : NON_TEACHING_PROFILE_FIELDS;
+    profileFields.forEach((field) => {
+      if (req.body[field] === undefined) return;
+
+      if (field === "subjects" || field === "classes_assigned" || field === "operational_permissions") {
+        if (Array.isArray(req.body[field])) {
+          staffProfile[field] = req.body[field].map((item) => String(item).trim()).filter(Boolean);
+        } else if (typeof req.body[field] === "string") {
+          staffProfile[field] = req.body[field]
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+        return;
+      }
+
+      if (field === "experience_years") {
+        staffProfile.experience_years = req.body.experience_years === "" || req.body.experience_years === null
+          ? null
+          : Number(req.body.experience_years);
+        return;
+      }
+
+      const rawValue = req.body[field];
+      staffProfile[field] = rawValue === "" ? null : String(rawValue).trim();
+    });
+
+    await staffProfile.save();
+
+    const hasProfileDetails = roleName === "teaching_staff"
+      ? hasTeachingDetails(staffProfile)
+      : hasNonTeachingDetails(staffProfile);
+
     res.status(200).json({
       message: "Staff details saved successfully",
       staff,
+      staff_profile: staffProfile,
+      has_staff_details: hasCoreStaffDetails(staff) || hasProfileDetails,
     });
   } catch (error) {
     if (error.name === "ValidationError") {

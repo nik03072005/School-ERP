@@ -12,6 +12,10 @@ function Dashboard() {
     return <Navigate to="/admin" replace />;
   }
 
+  if (user.role === "teaching_staff") {
+    return <Navigate to="/teacher/attendance" replace />;
+  }
+
   return (
     <div className="panel basic-dashboard">
       <h1>

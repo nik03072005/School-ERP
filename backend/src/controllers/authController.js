@@ -74,7 +74,7 @@ export const register = async (req, res) => {
     });
 
     if (role === "teaching_staff" || role === "non_teaching_staff") {
-      await Staff.create({ user_id: createdUser._id });
+      await Staff.create({ user_id: createdUser._id, staff_type: role });
     } else if (role === "student") {
       await Student.create({ user_id: createdUser._id });
     }

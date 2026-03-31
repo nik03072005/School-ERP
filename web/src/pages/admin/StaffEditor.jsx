@@ -11,6 +11,15 @@ const EMPTY_FORM = {
   bank_account_no: "",
   bank_name: "",
   is_active: true,
+  qualification: "",
+  experience_years: "",
+  subjects: "",
+  classes_assigned: "",
+  job_category: "",
+  shift: "",
+  reporting_manager: "",
+  operational_permissions: "",
+  employee_notes: "",
 };
 
 function StaffEditor() {
@@ -43,6 +52,17 @@ function StaffEditor() {
             bank_account_no: data.staff.bank_account_no || "",
             bank_name: data.staff.bank_name || "",
             is_active: data.staff.is_active ?? true,
+            qualification: data.staff_profile?.qualification || "",
+            experience_years: data.staff_profile?.experience_years ?? "",
+            subjects: Array.isArray(data.staff_profile?.subjects) ? data.staff_profile.subjects.join(", ") : "",
+            classes_assigned: Array.isArray(data.staff_profile?.classes_assigned) ? data.staff_profile.classes_assigned.join(", ") : "",
+            job_category: data.staff_profile?.job_category || "",
+            shift: data.staff_profile?.shift || "",
+            reporting_manager: data.staff_profile?.reporting_manager || "",
+            operational_permissions: Array.isArray(data.staff_profile?.operational_permissions)
+              ? data.staff_profile.operational_permissions.join(", ")
+              : "",
+            employee_notes: data.staff_profile?.employee_notes || "",
           });
         }
       } catch (err) {
@@ -71,6 +91,7 @@ function StaffEditor() {
       await adminService.upsertStaffByUser(userId, {
         ...form,
         basic_salary: form.basic_salary === "" ? "" : Number(form.basic_salary),
+        experience_years: form.experience_years === "" ? "" : Number(form.experience_years),
       });
 
       setMessage("Staff details saved successfully.");
@@ -85,6 +106,10 @@ function StaffEditor() {
     if (!user) return "";
     return `${user.first_name || ""} ${user.last_name || ""}`.trim();
   }, [user]);
+
+  const roleName = user?.role_id?.name;
+  const isTeaching = roleName === "teaching_staff";
+  const isNonTeaching = roleName === "non_teaching_staff";
 
   if (loading) {
     return <div className="panel loading-panel"><div className="loader" /></div>;
@@ -162,6 +187,70 @@ function StaffEditor() {
             </label>
           </div>
         </article>
+
+        {isTeaching ? (
+          <article className="form-section">
+            <h3>Teaching Profile</h3>
+            <div className="form-grid">
+              <label>
+                Qualification
+                <input value={form.qualification} onChange={(e) => setField("qualification", e.target.value)} />
+              </label>
+              <label>
+                Experience (years)
+                <input
+                  type="number"
+                  min="0"
+                  value={form.experience_years}
+                  onChange={(e) => setField("experience_years", e.target.value)}
+                />
+              </label>
+              <label>
+                Subjects (comma separated)
+                <input value={form.subjects} onChange={(e) => setField("subjects", e.target.value)} />
+              </label>
+              <label>
+                Classes Assigned (comma separated)
+                <input value={form.classes_assigned} onChange={(e) => setField("classes_assigned", e.target.value)} />
+              </label>
+            </div>
+            <label>
+              Notes
+              <textarea rows={2} value={form.employee_notes} onChange={(e) => setField("employee_notes", e.target.value)} />
+            </label>
+          </article>
+        ) : null}
+
+        {isNonTeaching ? (
+          <article className="form-section">
+            <h3>Non-Teaching Profile</h3>
+            <div className="form-grid">
+              <label>
+                Job Category
+                <input value={form.job_category} onChange={(e) => setField("job_category", e.target.value)} />
+              </label>
+              <label>
+                Shift
+                <input value={form.shift} onChange={(e) => setField("shift", e.target.value)} />
+              </label>
+              <label>
+                Reporting Manager
+                <input value={form.reporting_manager} onChange={(e) => setField("reporting_manager", e.target.value)} />
+              </label>
+              <label>
+                Operational Permissions (comma separated)
+                <input
+                  value={form.operational_permissions}
+                  onChange={(e) => setField("operational_permissions", e.target.value)}
+                />
+              </label>
+            </div>
+            <label>
+              Notes
+              <textarea rows={2} value={form.employee_notes} onChange={(e) => setField("employee_notes", e.target.value)} />
+            </label>
+          </article>
+        ) : null}
 
         <button type="submit" className="btn btn-primary" disabled={saving}>
           {saving ? "Saving..." : "Save Details"}

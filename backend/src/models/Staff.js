@@ -35,6 +35,11 @@ const staffSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    staff_type: {
+      type: String,
+      enum: ["teaching_staff", "non_teaching_staff"],
+      required: true,
+    },
     is_active: {
       type: Boolean,
       default: true,
