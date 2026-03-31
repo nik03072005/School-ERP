@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
+import Staff from "../models/Staff.js";
+import Role from "../models/Role.js";
 
 const buildUserPayload = async (user) => {
   const payload = {
@@ -9,6 +11,7 @@ const buildUserPayload = async (user) => {
     last_name: user.last_name,
     email: user.email,
     mobile: user.mobile,
+    avatar: user.avatar,
     role: user.role_id?.name ?? user.role_id,
     status: user.status,
     is_active: user.is_active,
@@ -24,6 +27,80 @@ const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
+
+// @desc    Register user
+// @route   POST /api/auth/register
+// @access  Public
+export const register = async (req, res) => {
+  let createdUser = null;
+
+  try {
+    const { first_name, last_name, email, password, mobile, avatar, role } = req.body;
+
+    if (!first_name || !last_name || !email || !password || !role) {
+      return res.status(400).json({ message: "Please provide all required fields" });
+    }
+
+    if (role === "admin") {
+      return res.status(403).json({ message: "Admin accounts can only be created by admins" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const roleDoc = await Role.findOne({ name: role });
+    if (!roleDoc) {
+      return res.status(400).json({ message: `Invalid role: ${role}` });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
+
+    createdUser = await User.create({
+      first_name,
+      last_name,
+      email: normalizedEmail,
+      password,
+      mobile,
+      avatar,
+      role_id: roleDoc._id,
+      status: "pending",
+      is_active: true,
+      created_by: null,
+    });
+
+    if (role === "teaching_staff" || role === "non_teaching_staff") {
+      await Staff.create({ user_id: createdUser._id });
+    } else if (role === "student") {
+      await Student.create({ user_id: createdUser._id });
+    }
+
+    const user = await User.findById(createdUser._id).populate("role_id", "name");
+    const token = signToken(user._id);
+    const userPayload = await buildUserPayload(user);
+
+    res.status(201).json({
+      message: "Registration successful. Awaiting admin approval.",
+      token,
+      user: userPayload,
+    });
+  } catch (error) {
+    if (createdUser) {
+      await User.deleteOne({ _id: createdUser._id }).catch(() => {});
+    }
+
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e) => e.message).join(", ");
+      return res.status(400).json({ message: messages });
+    }
+
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 // @desc    Login user
 // @route   POST /api/auth/login

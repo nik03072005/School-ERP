@@ -26,6 +26,7 @@
 	}
 
 	input,
+	select,
 	textarea {
 		@apply mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100;
 	}
@@ -145,7 +146,7 @@
 	}
 
 	.home-page {
-		@apply flex min-h-screen items-center justify-center bg-gradient-to-br from-cyan-100 via-slate-100 to-emerald-100 p-6;
+		@apply flex min-h-screen items-center justify-center bg-linear-to-br from-cyan-100 via-slate-100 to-emerald-100 p-6;
 	}
 
 	.home-hero {
@@ -169,7 +170,7 @@
 	}
 
 	.auth-page {
-		@apply flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-cyan-50 to-slate-200 p-6;
+		@apply flex min-h-screen items-center justify-center bg-linear-to-br from-slate-100 via-cyan-50 to-slate-200 p-6;
 	}
 
 	.auth-card {
@@ -221,7 +222,7 @@
 	}
 
 	.brand-block {
-		@apply rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 p-4 text-white;
+		@apply rounded-2xl bg-linear-to-br from-cyan-500 to-cyan-700 p-4 text-white;
 	}
 
 	.brand-kicker {
@@ -346,6 +347,79 @@
 
 	.empty-panel {
 		@apply text-sm text-slate-500;
+	}
+
+	.table-filters-panel {
+		@apply mb-4 space-y-4;
+	}
+
+	.table-filters-grid {
+		@apply grid gap-3 md:grid-cols-2 xl:grid-cols-3;
+	}
+
+	.table-filter-actions {
+		@apply flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500;
+	}
+
+	.table-shell {
+		@apply space-y-4;
+	}
+
+	.table-scroll {
+		@apply overflow-x-auto;
+	}
+
+	.admin-table {
+		@apply w-full border-collapse;
+		min-width: 980px;
+	}
+
+	.admin-table thead th {
+		@apply border-b border-slate-200 bg-slate-50 px-3 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500;
+	}
+
+	.admin-table tbody td {
+		@apply border-b border-slate-100 px-3 py-3 text-sm text-slate-700 align-top;
+	}
+
+	.admin-table tbody tr:hover {
+		@apply bg-slate-50/80;
+	}
+
+	.sort-btn {
+		@apply inline-flex items-center rounded-lg px-2 py-1 -ml-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 hover:bg-slate-100 hover:text-slate-700;
+	}
+
+	.table-primary {
+		@apply text-sm font-semibold text-slate-900;
+	}
+
+	.table-secondary {
+		@apply mt-1 text-xs text-slate-500;
+	}
+
+	.table-actions {
+		@apply flex flex-wrap gap-2;
+	}
+
+	.empty-state {
+		@apply py-6 text-center text-sm text-slate-500;
+	}
+
+	.activity-pill {
+		@apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
+	}
+
+	.activity-pill.active {
+		@apply bg-emerald-100 text-emerald-700;
+	}
+
+	.activity-pill.inactive {
+		@apply bg-slate-200 text-slate-700;
+	}
+
+	.table-pagination {
+		@apply flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600;
 	}
 
 	.detail-grid {

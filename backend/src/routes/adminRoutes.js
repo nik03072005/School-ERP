@@ -15,6 +15,8 @@ import {
   upsertStudentAdmission,
   approveAdmission,
   rejectAdmission,
+  getStaffByUser,
+  upsertStaffByUser,
 } from "../controllers/adminController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -41,5 +43,9 @@ router.get("/admissions/:studentId", getStudentAdmission);
 router.put("/admissions/:studentId", upsertStudentAdmission);
 router.patch("/admissions/:studentId/approve", approveAdmission);
 router.patch("/admissions/:studentId/reject", rejectAdmission);
+
+// Staff detail routes
+router.get("/staff/by-user/:userId", getStaffByUser);
+router.put("/staff/by-user/:userId", upsertStaffByUser);
 
 export default router;

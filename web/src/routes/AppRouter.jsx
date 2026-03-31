@@ -9,6 +9,7 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import UserManagement from "../pages/admin/UserManagement";
 import AdmissionDetail from "../pages/admin/AdmissionDetail";
 import AdmissionEditor from "../pages/admin/AdmissionEditor";
+import StaffEditor from "../pages/admin/StaffEditor";
 
 function AppRouter() {
   return (
@@ -39,6 +40,7 @@ function AppRouter() {
           <Route path="users" element={<UserManagement />} />
           <Route path="admissions/:studentId" element={<AdmissionDetail />} />
           <Route path="admissions/edit/:userId" element={<AdmissionEditor />} />
+          <Route path="staff/edit/:userId" element={<StaffEditor />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

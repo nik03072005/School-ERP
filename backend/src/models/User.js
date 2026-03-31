@@ -34,6 +34,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    avatar: {
+      type: String,
+      trim: true,
+      required: false,
+      default: null,
+    },
     is_active: {
       type: Boolean,
       default: true,

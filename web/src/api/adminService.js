@@ -1,8 +1,8 @@
 import API from "./api";
 
 export const adminService = {
-  getPendingUsers: async () => {
-    const response = await API.get("/admin/users/pending");
+  getPendingUsers: async (params) => {
+    const response = await API.get("/admin/users/pending", { params });
     return response.data;
   },
 
@@ -36,8 +36,13 @@ export const adminService = {
     return response.data;
   },
 
-  getPendingAdmissions: async () => {
-    const response = await API.get("/admin/admissions/pending");
+  getUserById: async (id) => {
+    const response = await API.get(`/admin/users/${id}`);
+    return response.data;
+  },
+
+  getPendingAdmissions: async (params) => {
+    const response = await API.get("/admin/admissions/pending", { params });
     return response.data;
   },
 
@@ -63,6 +68,16 @@ export const adminService = {
 
   rejectAdmission: async (studentId) => {
     const response = await API.patch(`/admin/admissions/${studentId}/reject`);
+    return response.data;
+  },
+
+  getStaffByUser: async (userId) => {
+    const response = await API.get(`/admin/staff/by-user/${userId}`);
+    return response.data;
+  },
+
+  upsertStaffByUser: async (userId, payload) => {
+    const response = await API.put(`/admin/staff/by-user/${userId}`, payload);
     return response.data;
   },
 };

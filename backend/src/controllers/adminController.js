@@ -20,29 +20,159 @@ const ADMISSION_FIELDS = [
   "docs_address_proof", "docs_photograph", "docs_other",
 ];
 
-// @desc    Get all users (with optional filters: role, status, is_active)
+const STAFF_FIELDS = [
+  "employee_code",
+  "designation",
+  "department",
+  "joining_date",
+  "basic_salary",
+  "bank_account_no",
+  "bank_name",
+  "is_active",
+];
+
+const USER_SORT_FIELDS = {
+  first_name: "first_name",
+  last_name: "last_name",
+  email: "email",
+  status: "status",
+  createdAt: "createdAt",
+};
+
+const toPositiveInt = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const parseDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const buildUserFilter = async (query, forceStatus) => {
+  const { role, status, is_active, search, created_from, created_to } = query;
+  const filter = {};
+
+  if (forceStatus) {
+    filter.status = forceStatus;
+  } else if (status) {
+    filter.status = status;
+  }
+
+  if (is_active !== undefined && is_active !== "") {
+    filter.is_active = is_active === "true";
+  }
+
+  if (search) {
+    const searchRegex = new RegExp(search.trim(), "i");
+    filter.$or = [
+      { first_name: searchRegex },
+      { last_name: searchRegex },
+      { email: searchRegex },
+      { mobile: searchRegex },
+    ];
+  }
+
+  const fromDate = parseDate(created_from);
+  const toDate = parseDate(created_to);
+  if (fromDate || toDate) {
+    filter.createdAt = {};
+    if (fromDate) filter.createdAt.$gte = fromDate;
+    if (toDate) {
+      toDate.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = toDate;
+    }
+  }
+
+  if (role) {
+    const roleDoc = await Role.findOne({ name: role }).select("_id");
+    if (!roleDoc) {
+      return { noResults: true, filter };
+    }
+    filter.role_id = roleDoc._id;
+  }
+
+  return { noResults: false, filter };
+};
+
+const enrichUsersWithFormMeta = async (users) => {
+  const userIds = users.map((user) => user._id);
+  if (userIds.length === 0) return [];
+
+  const [studentProfiles, staffProfiles] = await Promise.all([
+    Student.find({ user_id: { $in: userIds } }).select("user_id"),
+    Staff.find({ user_id: { $in: userIds } }).select("user_id"),
+  ]);
+
+  const studentIdSet = new Set(studentProfiles.map((entry) => String(entry.user_id)));
+  const staffIdSet = new Set(staffProfiles.map((entry) => String(entry.user_id)));
+
+  return users.map((userDoc) => {
+    const user = userDoc.toObject();
+    const userId = String(user._id);
+
+    return {
+      ...user,
+      has_admission_form: studentIdSet.has(userId),
+      has_staff_details: staffIdSet.has(userId),
+    };
+  });
+};
+
+const listUsersWithQuery = async (query, forceStatus = null) => {
+  const { noResults, filter } = await buildUserFilter(query, forceStatus);
+  const sortField = USER_SORT_FIELDS[query.sort_by] || "createdAt";
+  const sortDir = query.sort_dir === "asc" ? 1 : -1;
+  const page = toPositiveInt(query.page, 1);
+  const limit = Math.min(toPositiveInt(query.limit, 25), 100);
+  const skip = (page - 1) * limit;
+
+  if (noResults) {
+    return {
+      users: [],
+      count: 0,
+      pagination: {
+        page,
+        limit,
+        totalPages: 0,
+        totalItems: 0,
+      },
+    };
+  }
+
+  const [totalItems, userDocs] = await Promise.all([
+    User.countDocuments(filter),
+    User.find(filter)
+      .select("-password")
+      .populate("role_id", "name")
+      .populate("created_by", "first_name last_name email")
+      .sort({ [sortField]: sortDir, _id: -1 })
+      .skip(skip)
+      .limit(limit),
+  ]);
+
+  const users = await enrichUsersWithFormMeta(userDocs);
+
+  return {
+    users,
+    count: users.length,
+    pagination: {
+      page,
+      limit,
+      totalPages: Math.ceil(totalItems / limit),
+      totalItems,
+    },
+  };
+};
+
+// @desc    Get all users (search + filters + sorting + pagination)
 // @route   GET /api/admin/users
 // @access  Admin
 export const getAllUsers = async (req, res) => {
   try {
-    const { role, status, is_active } = req.query;
-    const filter = {};
-
-    if (status) filter.status = status;
-    if (is_active !== undefined) filter.is_active = is_active === "true";
-
-    let users = await User.find(filter)
-      .select("-password")
-      .populate("role_id", "name")
-      .populate("created_by", "first_name last_name email")
-      .sort({ createdAt: -1 });
-
-    // Filter by role name if provided
-    if (role) {
-      users = users.filter((u) => u.role_id?.name === role);
-    }
-
-    res.status(200).json({ count: users.length, users });
+    const result = await listUsersWithQuery(req.query);
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -55,7 +185,7 @@ export const createUser = async (req, res) => {
   let createdUser = null;
 
   try {
-    const { first_name, last_name, email, password, mobile, role } = req.body;
+    const { first_name, last_name, email, password, mobile, avatar, role } = req.body;
 
     if (!first_name || !last_name || !email || !password || !role) {
       return res.status(400).json({ message: "Please provide all required fields" });
@@ -77,6 +207,7 @@ export const createUser = async (req, res) => {
       email,
       password,
       mobile,
+      avatar,
       role_id: roleDoc._id,
       status: "approved",
       is_active: true,
@@ -117,12 +248,8 @@ export const createUser = async (req, res) => {
 // @access  Admin
 export const getPendingUsers = async (req, res) => {
   try {
-    const users = await User.find({ status: "pending" })
-      .select("-password")
-      .populate("role_id", "name")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({ count: users.length, users });
+    const result = await listUsersWithQuery(req.query, "pending");
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -275,13 +402,41 @@ export const deleteUser = async (req, res) => {
 // @access  Admin
 export const getPendingAdmissions = async (req, res) => {
   try {
-    const students = await Student.find({ admission_status: "pending" })
+    const { search, created_from, created_to } = req.query;
+    const filter = { admission_status: "pending" };
+
+    const fromDate = parseDate(created_from);
+    const toDate = parseDate(created_to);
+    if (fromDate || toDate) {
+      filter.admission_submitted_at = {};
+      if (fromDate) filter.admission_submitted_at.$gte = fromDate;
+      if (toDate) {
+        toDate.setHours(23, 59, 59, 999);
+        filter.admission_submitted_at.$lte = toDate;
+      }
+    }
+
+    let students = await Student.find(filter)
       .populate({
         path: "user_id",
         select: "-password",
         populate: { path: "role_id", select: "name" },
       })
       .sort({ admission_submitted_at: -1 });
+
+    if (search) {
+      const normalized = search.trim().toLowerCase();
+      students = students.filter((student) => {
+        const user = student?.user_id;
+        if (!user) return false;
+        const fullName = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase();
+        return (
+          fullName.includes(normalized)
+          || String(user.email || "").toLowerCase().includes(normalized)
+          || String(user.mobile || "").toLowerCase().includes(normalized)
+        );
+      });
+    }
 
     res.status(200).json({ count: students.length, students });
   } catch (error) {
@@ -344,6 +499,10 @@ export const upsertStudentAdmission = async (req, res) => {
     student.admission_submitted_at = student.admission_submitted_at || new Date();
     await student.save();
 
+    if (typeof req.body.avatar === "string" && req.body.avatar.trim()) {
+      await User.findByIdAndUpdate(student.user_id, { avatar: req.body.avatar.trim() });
+    }
+
     const populated = await Student.findById(student._id).populate({
       path: "user_id",
       select: "-password",
@@ -390,6 +549,99 @@ export const rejectAdmission = async (req, res) => {
 
     res.status(200).json({ message: "Admission rejected. Student may resubmit." });
   } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Get staff profile by linked user ID
+// @route   GET /api/admin/staff/by-user/:userId
+// @access  Admin
+export const getStaffByUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId)
+      .select("-password")
+      .populate("role_id", "name");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const roleName = user.role_id?.name;
+    const isStaffRole = roleName === "teaching_staff" || roleName === "non_teaching_staff";
+    if (!isStaffRole) {
+      return res.status(400).json({ message: "Only staff users can have staff details" });
+    }
+
+    const staff = await Staff.findOne({ user_id: user._id });
+
+    res.status(200).json({
+      user,
+      staff,
+      has_staff_details: Boolean(staff),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Create or update staff profile by linked user ID
+// @route   PUT /api/admin/staff/by-user/:userId
+// @access  Admin
+export const upsertStaffByUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).populate("role_id", "name");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const roleName = user.role_id?.name;
+    const isStaffRole = roleName === "teaching_staff" || roleName === "non_teaching_staff";
+    if (!isStaffRole) {
+      return res.status(400).json({ message: "Only staff users can have staff details" });
+    }
+
+    let staff = await Staff.findOne({ user_id: user._id });
+    if (!staff) {
+      staff = new Staff({ user_id: user._id });
+    }
+
+    STAFF_FIELDS.forEach((field) => {
+      if (req.body[field] === undefined) return;
+
+      if (field === "joining_date") {
+        staff.joining_date = req.body.joining_date ? new Date(req.body.joining_date) : null;
+        return;
+      }
+
+      if (field === "basic_salary") {
+        staff.basic_salary = req.body.basic_salary === "" || req.body.basic_salary === null
+          ? null
+          : Number(req.body.basic_salary);
+        return;
+      }
+
+      if (field === "is_active") {
+        staff.is_active = Boolean(req.body.is_active);
+        return;
+      }
+
+      const rawValue = req.body[field];
+      staff[field] = rawValue === "" ? null : String(rawValue).trim();
+    });
+
+    await staff.save();
+
+    res.status(200).json({
+      message: "Staff details saved successfully",
+      staff,
+    });
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e) => e.message).join(", ");
+      return res.status(400).json({ message: messages });
+    }
+
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
