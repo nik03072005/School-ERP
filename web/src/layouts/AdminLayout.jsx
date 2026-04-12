@@ -24,8 +24,8 @@ const NAV_ITEMS = [
       { to: "/admin/school-setup/operations", label: "Academic Operations", icon: ClipboardList },
     ],
   },
-  { to: "/admin/attendance", label: "Attendance Ops", icon: CalendarCheck2 },
-  { to: "/admin/attendance-audit", label: "Attendance Audit", icon: ShieldCheck },
+  // { to: "/admin/attendance", label: "Attendance Ops", icon: CalendarCheck2 },
+  // { to: "/admin/attendance-audit", label: "Attendance Audit", icon: ShieldCheck },
 ];
 
 function AdminLayout() {
