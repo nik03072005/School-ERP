@@ -20,34 +20,10 @@ const startServer = async () => {
 
   const app = express();
 
-  const normalizeOrigin = (value) => value.trim().toLowerCase().replace(/\/+$/, "");
-
-  const trustedDefaultOrigins = ["https://erp.kidzgalaxy.org", "http://localhost:5173"];
-
-  const envConfiguredOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || "")
-    .split(",")
-    .map((origin) => normalizeOrigin(origin))
-    .filter(Boolean);
-
-  const corsOrigins = [...new Set([...trustedDefaultOrigins.map(normalizeOrigin), ...envConfiguredOrigins])];
-
+  const corsOrigin = process.env.CORS_ORIGIN || "https://erp.kidzgalaxy.org";
   app.use(
     cors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (curl, Postman, server-to-server).
-        if (!origin) {
-          return callback(null, true);
-        }
-
-        const normalizedOrigin = normalizeOrigin(origin);
-
-        if (corsOrigins.includes(normalizedOrigin)) {
-          return callback(null, true);
-        }
-
-        console.warn(`CORS blocked for origin: ${origin}`);
-        return callback(new Error(`CORS blocked for origin: ${origin}`));
-      },
+      origin: corsOrigin,
       credentials: true,
     })
   );
