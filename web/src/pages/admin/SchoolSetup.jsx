@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   LayoutGrid,
+  Pencil,
   Printer,
   Plus,
   RefreshCcw,
@@ -40,9 +41,19 @@ function SchoolSetup({ view = "class-section" }) {
   const timetablePrintRef = useRef(null);
 
   const [classForm, setClassForm] = useState({ name: "", grade_level: 1, capacity: 40 });
+  const [editClassForm, setEditClassForm] = useState({ class_id: "", name: "", grade_level: 1, capacity: 40 });
   const [sectionForm, setSectionForm] = useState({ class_id: "", name: "", class_teacher_user_id: "" });
+  const [editSectionForm, setEditSectionForm] = useState({ section_id: "", name: "", class_teacher_user_id: "" });
   const [periodForm, setPeriodForm] = useState({ name: "", period_number: 1, start_time: "08:00", end_time: "08:45", is_break: false });
   const [assignmentForm, setAssignmentForm] = useState({ teacher_user_id: "", class_id: "", section_id: "", is_primary: false, remarks: "" });
+  const [editAssignmentForm, setEditAssignmentForm] = useState({
+    assignment_id: "",
+    teacher_user_id: "",
+    class_id: "",
+    section_id: "",
+    is_primary: false,
+    remarks: "",
+  });
 
   const load = async () => {
     try {
@@ -92,6 +103,57 @@ function SchoolSetup({ view = "class-section" }) {
 
   const closeModal = () => setActiveModal(null);
 
+  const openEditClassModal = (classItem) => {
+    if (!classItem?._id) {
+      setError("Could not load class details for editing.");
+      return;
+    }
+
+    setError("");
+    setEditClassForm({
+      class_id: String(classItem._id),
+      name: classItem.name || "",
+      grade_level: Number(classItem.grade_level || 1),
+      capacity: Number(classItem.capacity || 40),
+    });
+    setActiveModal("edit-class");
+  };
+
+  const openEditSectionModal = (sectionItem) => {
+    if (!sectionItem?._id) {
+      setError("Could not load section details for editing.");
+      return;
+    }
+
+    setError("");
+    setEditSectionForm({
+      section_id: String(sectionItem._id),
+      name: sectionItem.name || "",
+      class_teacher_user_id: sectionItem?.class_teacher_user_id?._id
+        ? String(sectionItem.class_teacher_user_id._id)
+        : "",
+    });
+    setActiveModal("edit-section");
+  };
+
+  const openEditAssignmentModal = (assignmentItem) => {
+    if (!assignmentItem?._id) {
+      setError("Could not load assignment details for editing.");
+      return;
+    }
+
+    setError("");
+    setEditAssignmentForm({
+      assignment_id: String(assignmentItem._id),
+      teacher_user_id: assignmentItem?.teacher_user_id?._id ? String(assignmentItem.teacher_user_id._id) : "",
+      class_id: assignmentItem?.class_id?._id ? String(assignmentItem.class_id._id) : "",
+      section_id: assignmentItem?.section_id?._id ? String(assignmentItem.section_id._id) : "",
+      is_primary: Boolean(assignmentItem.is_primary),
+      remarks: assignmentItem.remarks || "",
+    });
+    setActiveModal("edit-assignment");
+  };
+
   const createClass = async (event) => {
     event.preventDefault();
     try {
@@ -115,6 +177,54 @@ function SchoolSetup({ view = "class-section" }) {
       closeModal();
     } catch (err) {
       setError(err?.response?.data?.message || "Could not create section");
+    }
+  };
+
+  const updateClassDetails = async (event) => {
+    event.preventDefault();
+    if (!editClassForm.class_id) {
+      setError("Class selection is missing. Please try again.");
+      return;
+    }
+
+    try {
+      await setupService.updateClass(editClassForm.class_id, {
+        name: editClassForm.name,
+        grade_level: editClassForm.grade_level,
+        capacity: editClassForm.capacity,
+      });
+      setNotice("Class updated");
+      setEditClassForm({ class_id: "", name: "", grade_level: 1, capacity: 40 });
+      await load();
+      closeModal();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Could not update class");
+    }
+  };
+
+  const updateSectionDetails = async (event) => {
+    event.preventDefault();
+    if (!editSectionForm.section_id) {
+      setError("Section selection is missing. Please try again.");
+      return;
+    }
+
+    try {
+      await setupService.updateSection(editSectionForm.section_id, {
+        name: editSectionForm.name,
+      });
+      if (editSectionForm.class_teacher_user_id) {
+        await setupService.assignClassTeacher(
+          editSectionForm.section_id,
+          editSectionForm.class_teacher_user_id
+        );
+      }
+      setNotice("Section updated");
+      setEditSectionForm({ section_id: "", name: "", class_teacher_user_id: "" });
+      await load();
+      closeModal();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Could not update section");
     }
   };
 
@@ -144,7 +254,43 @@ function SchoolSetup({ view = "class-section" }) {
     }
   };
 
+  const updateAssignmentDetails = async (event) => {
+    event.preventDefault();
+    if (!editAssignmentForm.assignment_id) {
+      setError("Assignment selection is missing. Please try again.");
+      return;
+    }
+
+    try {
+      // Assignment API does not expose patch update, so replace active record.
+      await setupService.deactivateTeacherAssignment(editAssignmentForm.assignment_id);
+      await setupService.createTeacherAssignment({
+        teacher_user_id: editAssignmentForm.teacher_user_id,
+        class_id: editAssignmentForm.class_id,
+        section_id: editAssignmentForm.section_id,
+        is_primary: editAssignmentForm.is_primary,
+        remarks: editAssignmentForm.remarks,
+      });
+      setNotice("Class teacher assignment updated");
+      setEditAssignmentForm({
+        assignment_id: "",
+        teacher_user_id: "",
+        class_id: "",
+        section_id: "",
+        is_primary: false,
+        remarks: "",
+      });
+      await load();
+      closeModal();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Could not update assignment");
+    }
+  };
+
   const selectedClassSections = sections.filter((section) => String(section?.class_id?._id) === String(assignmentForm.class_id));
+  const selectedEditAssignmentSections = sections.filter(
+    (section) => String(section?.class_id?._id) === String(editAssignmentForm.class_id)
+  );
 
   const timetableClassSections = useMemo(
     () => sections.filter((section) => String(section?.class_id?._id) === String(selectedTimetableClassId)),
@@ -636,6 +782,88 @@ function SchoolSetup({ view = "class-section" }) {
         </div>
       ) : null}
 
+      {activeModal === "edit-class" ? (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <article className="modal-card create-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Edit Class</h3>
+              <button type="button" className="btn btn-ghost" onClick={closeModal}>Close</button>
+            </div>
+            <form className="create-form" onSubmit={updateClassDetails}>
+              <label>
+                Class Name
+                <input
+                  value={editClassForm.name}
+                  onChange={(e) => setEditClassForm((p) => ({ ...p, name: e.target.value }))}
+                  required
+                />
+              </label>
+              <label>
+                Grade Level
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={editClassForm.grade_level}
+                  onChange={(e) => setEditClassForm((p) => ({ ...p, grade_level: Number(e.target.value) }))}
+                  required
+                />
+              </label>
+              <label>
+                Capacity
+                <input
+                  type="number"
+                  min="1"
+                  value={editClassForm.capacity}
+                  onChange={(e) => setEditClassForm((p) => ({ ...p, capacity: Number(e.target.value) }))}
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={closeModal}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
+      {activeModal === "edit-section" ? (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <article className="modal-card create-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Edit Section</h3>
+              <button type="button" className="btn btn-ghost" onClick={closeModal}>Close</button>
+            </div>
+            <form className="create-form" onSubmit={updateSectionDetails}>
+              <label>
+                Section Name
+                <input
+                  value={editSectionForm.name}
+                  onChange={(e) => setEditSectionForm((p) => ({ ...p, name: e.target.value }))}
+                  required
+                />
+              </label>
+              <label>
+                Class Teacher
+                <select
+                  value={editSectionForm.class_teacher_user_id}
+                  onChange={(e) => setEditSectionForm((p) => ({ ...p, class_teacher_user_id: e.target.value }))}
+                >
+                  <option value="">Unassigned</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher._id} value={teacher._id}>{teacher.first_name} {teacher.last_name}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={closeModal}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
       {activeModal === "assignment" ? (
         <div className="modal-backdrop" onClick={closeModal}>
           <article className="modal-card create-panel" onClick={(event) => event.stopPropagation()}>
@@ -677,6 +905,77 @@ function SchoolSetup({ view = "class-section" }) {
               <div className="modal-actions">
                 <button type="button" className="btn btn-ghost" onClick={closeModal}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Save Assignment</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
+      {activeModal === "edit-assignment" ? (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <article className="modal-card create-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Edit Class Teacher Assignment</h3>
+              <button type="button" className="btn btn-ghost" onClick={closeModal}>Close</button>
+            </div>
+            <form className="create-form" onSubmit={updateAssignmentDetails}>
+              <label>
+                Teacher
+                <select
+                  value={editAssignmentForm.teacher_user_id}
+                  onChange={(e) => setEditAssignmentForm((p) => ({ ...p, teacher_user_id: e.target.value }))}
+                  required
+                >
+                  <option value="">Select teacher</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher._id} value={teacher._id}>{teacher.first_name} {teacher.last_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Class
+                <select
+                  value={editAssignmentForm.class_id}
+                  onChange={(e) => setEditAssignmentForm((p) => ({ ...p, class_id: e.target.value, section_id: "" }))}
+                  required
+                >
+                  <option value="">Select class</option>
+                  {classes.map((item) => (
+                    <option key={item._id} value={item._id}>{item.name} (Grade {item.grade_level})</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Section
+                <select
+                  value={editAssignmentForm.section_id}
+                  onChange={(e) => setEditAssignmentForm((p) => ({ ...p, section_id: e.target.value }))}
+                  required
+                >
+                  <option value="">Select section</option>
+                  {selectedEditAssignmentSections.map((item) => (
+                    <option key={item._id} value={item._id}>{item.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="toggle-item">
+                <span>Primary Assignment</span>
+                <input
+                  type="checkbox"
+                  checked={editAssignmentForm.is_primary}
+                  onChange={(e) => setEditAssignmentForm((p) => ({ ...p, is_primary: e.target.checked }))}
+                />
+              </label>
+              <label>
+                Remarks
+                <input
+                  value={editAssignmentForm.remarks}
+                  onChange={(e) => setEditAssignmentForm((p) => ({ ...p, remarks: e.target.value }))}
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={closeModal}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
               </div>
             </form>
           </article>
@@ -732,16 +1031,37 @@ function SchoolSetup({ view = "class-section" }) {
                   <th>Class</th>
                   <th>Section</th>
                   <th>Class Teacher</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {sections.length === 0 ? (
-                  <tr><td colSpan={3}><p className="empty-state">No sections created yet.</p></td></tr>
+                  <tr><td colSpan={4}><p className="empty-state">No sections created yet.</p></td></tr>
                 ) : sections.map((section) => (
                   <tr key={section._id}>
                     <td>{section?.class_id?.name} (Grade {section?.class_id?.grade_level})</td>
                     <td>{section.name}</td>
                     <td>{section?.class_teacher_user_id ? `${section.class_teacher_user_id.first_name} ${section.class_teacher_user_id.last_name}` : "Unassigned"}</td>
+                    <td>
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-ghost inline-flex items-center gap-2"
+                          onClick={() => openEditClassModal(section?.class_id)}
+                        >
+                          <Pencil size={14} aria-hidden="true" />
+                          Edit Class
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost inline-flex items-center gap-2"
+                          onClick={() => openEditSectionModal(section)}
+                        >
+                          <Pencil size={14} aria-hidden="true" />
+                          Edit Section
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -765,11 +1085,12 @@ function SchoolSetup({ view = "class-section" }) {
                   <th>Section</th>
                   <th>Primary</th>
                   <th>Remarks</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {assignments.length === 0 ? (
-                  <tr><td colSpan={5}><p className="empty-state">No assignments configured yet.</p></td></tr>
+                  <tr><td colSpan={6}><p className="empty-state">No assignments configured yet.</p></td></tr>
                 ) : assignments.map((assignment) => (
                   <tr key={assignment._id}>
                     <td>{assignment?.teacher_user_id?.first_name} {assignment?.teacher_user_id?.last_name}</td>
@@ -777,6 +1098,16 @@ function SchoolSetup({ view = "class-section" }) {
                     <td>{assignment?.section_id?.name}</td>
                     <td>{assignment.is_primary ? "Yes" : "No"}</td>
                     <td>{assignment.remarks || "-"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-ghost inline-flex items-center gap-2"
+                        onClick={() => openEditAssignmentModal(assignment)}
+                      >
+                        <Pencil size={14} aria-hidden="true" />
+                        Edit Assignment
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -894,17 +1225,14 @@ function SchoolSetup({ view = "class-section" }) {
           )}
         </div>
 
-        <div ref={timetablePrintRef}>
+        <div ref={timetablePrintRef} className="flex min-h-0 flex-1 flex-col">
         <div className="mb-3 hidden print-only rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800">
           {plannerView === "class"
             ? `Class: ${classes.find((item) => String(item._id) === String(selectedTimetableClassId))?.name || "-"} | Section: ${sections.find((item) => String(item._id) === String(selectedTimetableSectionId))?.name || "-"}`
             : `Teacher: ${selectedTeacher ? `${selectedTeacher.first_name} ${selectedTeacher.last_name}` : "-"}`}
         </div>
 
-        <div
-          className="max-h-[68vh] overflow-x-auto overflow-y-auto rounded-2xl border border-orange-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
+        <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-orange-200 bg-white shadow-sm">
           <table className="w-full min-w-full border-collapse table-fixed">
             <thead>
               <tr>

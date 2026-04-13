@@ -50,6 +50,15 @@ const studentAttendanceSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    emergency_override_by_user_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    emergency_override_at: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

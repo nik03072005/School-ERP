@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { setupService } from "../../api/setupService";
 import { attendanceService } from "../../api/attendanceService";
 import { useAuth } from "../../context/AuthContext";
@@ -6,7 +7,8 @@ import { useAuth } from "../../context/AuthContext";
 const STATUS_OPTIONS = ["present", "absent", "late", "half_day", "leave_pending", "leave_approved"];
 
 function TeacherAttendance() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [sections, setSections] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -20,17 +22,19 @@ function TeacherAttendance() {
   useEffect(() => {
     const loadSections = async () => {
       try {
-        const [sectionData, assignmentData] = await Promise.all([
-          setupService.listSections({ is_active: true }),
-          setupService.listTeacherAssignments({ teacher_user_id: user?.id, is_active: true }),
-        ]);
+        const sectionData = await setupService.listSections(
+          emergencyMode
+            ? { is_active: true, include_all_for_override: true }
+            : { is_active: true, class_teacher_user_id: user?.id }
+        );
 
-        const sectionMap = new Map((sectionData.sections || []).map((section) => [String(section._id), section]));
-        const mine = (assignmentData.assignments || [])
-          .map((assignment) => sectionMap.get(String(assignment.section_id?._id || assignment.section_id)))
-          .filter(Boolean);
+        const list = sectionData.sections || [];
+        const mine = list.filter(
+          (section) =>
+            String(section?.class_teacher_user_id?._id || section?.class_teacher_user_id || "") === String(user?.id)
+        );
 
-        setSections(mine);
+        setSections(emergencyMode ? list : mine);
       } catch (err) {
         setError(err?.response?.data?.message || "Could not load sections");
       }
@@ -39,7 +43,16 @@ function TeacherAttendance() {
     if (user?.id) {
       loadSections();
     }
-  }, [user?.id]);
+  }, [user?.id, emergencyMode]);
+
+  useEffect(() => {
+    if (!selectedSectionId) return;
+    const stillAvailable = sections.some((item) => String(item._id) === String(selectedSectionId));
+    if (!stillAvailable) {
+      setSelectedSectionId("");
+      setRows([]);
+    }
+  }, [sections, selectedSectionId]);
 
   const selectedSection = useMemo(
     () => sections.find((item) => String(item._id) === String(selectedSectionId)),
@@ -85,13 +98,25 @@ function TeacherAttendance() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
   return (
-    <section className="basic-dashboard">
+    <section className="basic-dashboard teacher-attendance-dashboard">
       <div className="panel-head">
         <div>
           <h2>Teacher Attendance</h2>
           <p>Mark start/end checkpoint attendance for your assigned section.</p>
         </div>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          onClick={handleLogout}
+        >
+          Sign Out
+        </button>
       </div>
 
       {notice ? <p className="alert success">{notice}</p> : null}

@@ -124,6 +124,8 @@ export const markStudentAttendanceBulk = async (req, res) => {
             marked_by_user_id: req.user._id,
             emergency_override: authCheck.emergencyOverride,
             emergency_reason: authCheck.emergencyOverride ? String(emergency_reason).trim() : "",
+            emergency_override_by_user_id: authCheck.emergencyOverride ? req.user._id : null,
+            emergency_override_at: authCheck.emergencyOverride ? new Date() : null,
           },
         },
         upsert: true,
@@ -138,6 +140,8 @@ export const markStudentAttendanceBulk = async (req, res) => {
       attendance_date: date,
       checkpoint,
     })
+      .populate("marked_by_user_id", "first_name last_name email")
+      .populate("emergency_override_by_user_id", "first_name last_name email")
       .populate({
         path: "student_id",
         select: "user_id",
@@ -193,7 +197,8 @@ export const getStudentAttendanceDaily = async (req, res) => {
       .sort({ roll_no: 1, admission_no: 1, _id: 1 });
 
     const attendance = await StudentAttendance.find({ class_id, section_id, attendance_date: date, checkpoint })
-      .select("student_id status remarks emergency_override emergency_reason updatedAt");
+      .select("student_id status remarks emergency_override emergency_reason emergency_override_by_user_id emergency_override_at updatedAt")
+      .populate("emergency_override_by_user_id", "first_name last_name email");
 
     const attendanceMap = new Map(attendance.map((item) => [String(item.student_id), item]));
 
@@ -209,6 +214,16 @@ export const getStudentAttendanceDaily = async (req, res) => {
         remarks: entry?.remarks || "",
         emergency_override: Boolean(entry?.emergency_override),
         emergency_reason: entry?.emergency_reason || "",
+        emergency_override_by_user_id: entry?.emergency_override_by_user_id?._id || null,
+        emergency_override_by: entry?.emergency_override_by_user_id
+          ? {
+            id: entry.emergency_override_by_user_id._id,
+            first_name: entry.emergency_override_by_user_id.first_name,
+            last_name: entry.emergency_override_by_user_id.last_name,
+            email: entry.emergency_override_by_user_id.email,
+          }
+          : null,
+        emergency_override_at: entry?.emergency_override_at || null,
         marked_at: entry?.updatedAt || null,
       };
     });
@@ -237,7 +252,8 @@ export const getStudentAttendanceSummary = async (req, res) => {
     }
 
     const records = await StudentAttendance.find(filter)
-      .select("attendance_date checkpoint status remarks emergency_override updatedAt")
+      .select("attendance_date checkpoint status remarks emergency_override emergency_reason emergency_override_by_user_id emergency_override_at updatedAt")
+      .populate("emergency_override_by_user_id", "first_name last_name email")
       .sort({ attendance_date: -1, checkpoint: 1 });
 
     const summary = ATTENDANCE_STATUSES.reduce((acc, item) => ({ ...acc, [item]: 0 }), {});
@@ -392,6 +408,7 @@ export const exportStudentAttendanceCsv = async (req, res) => {
         populate: { path: "user_id", select: "first_name last_name" },
       })
       .populate("marked_by_user_id", "first_name last_name")
+      .populate("emergency_override_by_user_id", "first_name last_name")
       .sort({ attendance_date: 1, checkpoint: 1, student_id: 1 });
 
     const header = [
@@ -404,12 +421,15 @@ export const exportStudentAttendanceCsv = async (req, res) => {
       "remarks",
       "marked_by",
       "emergency_override",
+      "emergency_override_by",
+      "emergency_override_at",
       "emergency_reason",
     ];
 
     const rows = records.map((item) => {
       const studentName = `${item?.student_id?.user_id?.first_name || ""} ${item?.student_id?.user_id?.last_name || ""}`.trim();
       const markedBy = `${item?.marked_by_user_id?.first_name || ""} ${item?.marked_by_user_id?.last_name || ""}`.trim();
+      const overrideBy = `${item?.emergency_override_by_user_id?.first_name || ""} ${item?.emergency_override_by_user_id?.last_name || ""}`.trim();
       return [
         item.attendance_date.toISOString().slice(0, 10),
         item.checkpoint,
@@ -420,6 +440,8 @@ export const exportStudentAttendanceCsv = async (req, res) => {
         item.remarks || "",
         markedBy,
         item.emergency_override ? "yes" : "no",
+        overrideBy,
+        item?.emergency_override_at ? new Date(item.emergency_override_at).toISOString() : "",
         item.emergency_reason || "",
       ];
     });

@@ -262,6 +262,10 @@
 		@apply mx-auto mt-10 w-full max-w-2xl;
 	}
 
+	.teacher-attendance-dashboard {
+		@apply max-w-7xl;
+	}
+
 	.basic-dashboard h1 {
 		@apply text-2xl font-bold;
 	}

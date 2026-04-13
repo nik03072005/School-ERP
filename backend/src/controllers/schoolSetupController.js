@@ -111,9 +111,20 @@ export const listSections = async (req, res) => {
   try {
     const { class_id, class_teacher_user_id } = req.query;
     const is_active = parseBool(req.query.is_active);
+    const includeAllForOverride = parseBool(req.query.include_all_for_override);
+    const roleName = req.user?.role_id?.name;
     const filter = {};
     if (class_id) filter.class_id = class_id;
-    if (class_teacher_user_id) filter.class_teacher_user_id = class_teacher_user_id;
+
+    // Teaching staff can only query sections where they are set as class teacher.
+    if (roleName === "teaching_staff") {
+      if (!includeAllForOverride) {
+        filter.class_teacher_user_id = req.user._id;
+      }
+    } else if (class_teacher_user_id) {
+      filter.class_teacher_user_id = class_teacher_user_id;
+    }
+
     if (is_active !== undefined) filter.is_active = is_active;
 
     const sections = await Section.find(filter)
