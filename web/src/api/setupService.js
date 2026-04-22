@@ -51,21 +51,6 @@ export const setupService = {
     return response.data;
   },
 
-  createTeacherAssignment: async (payload) => {
-    const response = await API.post("/setup/teacher-assignments", payload);
-    return response.data;
-  },
-
-  listTeacherAssignments: async (params) => {
-    const response = await API.get("/setup/teacher-assignments", { params });
-    return response.data;
-  },
-
-  deactivateTeacherAssignment: async (assignmentId) => {
-    const response = await API.patch(`/setup/teacher-assignments/${assignmentId}/deactivate`);
-    return response.data;
-  },
-
   createTimetableEntry: async (payload) => {
     const response = await API.post("/setup/timetable", payload);
     return response.data;

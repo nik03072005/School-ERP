@@ -71,6 +71,60 @@ const parseDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const toRollToken = (value, fallback) => {
+  const cleaned = String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  return cleaned || fallback;
+};
+
+const buildRollNo = (className, sectionName, sequenceNumber) => {
+  const classToken = toRollToken(className, "CLASS");
+  const sectionToken = toRollToken(sectionName, "SEC");
+  return `${classToken}-${sectionToken}-${String(sequenceNumber).padStart(3, "0")}`;
+};
+
+const compareStudentsAlphabetically = (left, right) => {
+  const leftFirst = String(left?.user_id?.first_name || "").toLowerCase();
+  const rightFirst = String(right?.user_id?.first_name || "").toLowerCase();
+  if (leftFirst !== rightFirst) return leftFirst.localeCompare(rightFirst);
+
+  const leftLast = String(left?.user_id?.last_name || "").toLowerCase();
+  const rightLast = String(right?.user_id?.last_name || "").toLowerCase();
+  if (leftLast !== rightLast) return leftLast.localeCompare(rightLast);
+
+  return String(left?._id || "").localeCompare(String(right?._id || ""));
+};
+
+const regenerateSectionRollNumbers = async ({ classDoc, sectionDoc }) => {
+  if (!classDoc?._id || !sectionDoc?._id) return;
+
+  const students = await Student.find({
+    class_id: classDoc._id,
+    section_id: sectionDoc._id,
+  })
+    .populate("user_id", "first_name last_name")
+    .select("_id user_id")
+    .lean(false);
+
+  students.sort(compareStudentsAlphabetically);
+
+  if (students.length === 0) return;
+
+  const operations = students.map((studentDoc, index) => ({
+    updateOne: {
+      filter: { _id: studentDoc._id },
+      update: {
+        $set: {
+          roll_no: buildRollNo(classDoc.name, sectionDoc.name, index + 1),
+        },
+      },
+    },
+  }));
+
+  await Student.bulkWrite(operations, { ordered: false });
+};
+
 const hasMeaningfulValue = (value) => {
   if (value === undefined || value === null) return false;
   if (typeof value === "string") return value.trim() !== "";
@@ -164,7 +218,7 @@ const enrichUsersWithFormMeta = async (users) => {
 
   const [studentProfiles, staffProfiles] = await Promise.all([
     Student.find({ user_id: { $in: userIds } })
-      .select(["_id", "user_id", "admission_status", "class_id", "section_id", "class_applying", ...ADMISSION_FIELDS].join(" "))
+      .select(["_id", "user_id", "admission_status", "class_id", "section_id", "class_applying", "roll_no", ...ADMISSION_FIELDS].join(" "))
       .populate("class_id", "name grade_level")
       .populate("section_id", "name"),
     Staff.find({ user_id: { $in: userIds } }).select("user_id staff_type employee_code designation department joining_date basic_salary bank_account_no bank_name"),
@@ -203,6 +257,7 @@ const enrichUsersWithFormMeta = async (users) => {
             _id: studentProfile._id,
             admission_status: studentProfile.admission_status,
             class_applying: studentProfile.class_applying,
+            roll_no: studentProfile.roll_no || "",
             class_id: studentProfile.class_id
               ? {
                   _id: studentProfile.class_id._id,
@@ -216,6 +271,16 @@ const enrichUsersWithFormMeta = async (users) => {
                   name: studentProfile.section_id.name,
                 }
               : null,
+          }
+        : null,
+      staff_profile: staffProfile
+        ? {
+            _id: staffProfile._id,
+            staff_type: staffProfile.staff_type,
+            employee_code: staffProfile.employee_code || "",
+            designation: staffProfile.designation || "",
+            department: staffProfile.department || "",
+            joining_date: staffProfile.joining_date || null,
           }
         : null,
       has_staff_details: hasStaffDetails,
@@ -600,6 +665,9 @@ export const upsertStudentAdmission = async (req, res) => {
     const student = await Student.findById(req.params.studentId);
     if (!student) return res.status(404).json({ message: "Student not found" });
 
+    const previousClassId = student.class_id ? String(student.class_id) : "";
+    const previousSectionId = student.section_id ? String(student.section_id) : "";
+
     const { class_id, section_id } = req.body;
     if (!class_id || !section_id) {
       return res.status(400).json({ message: "class_id and section_id are required before saving admission" });
@@ -639,6 +707,29 @@ export const upsertStudentAdmission = async (req, res) => {
     student.admission_status = req.body.admission_status || "approved";
     student.admission_submitted_at = student.admission_submitted_at || new Date();
     await student.save();
+
+    await regenerateSectionRollNumbers({ classDoc: assignedClass, sectionDoc: assignedSection });
+
+    const currentClassId = String(assignedClass._id);
+    const currentSectionId = String(assignedSection._id);
+    const sectionChanged = previousClassId
+      && previousSectionId
+      && (previousClassId !== currentClassId || previousSectionId !== currentSectionId);
+
+    if (sectionChanged) {
+      const [previousClass, previousSection] = await Promise.all([
+        Class.findById(previousClassId).select("_id name"),
+        Section.findById(previousSectionId).select("_id class_id name"),
+      ]);
+
+      if (
+        previousClass
+        && previousSection
+        && String(previousSection.class_id) === String(previousClass._id)
+      ) {
+        await regenerateSectionRollNumbers({ classDoc: previousClass, sectionDoc: previousSection });
+      }
+    }
 
     if (typeof req.body.avatar === "string" && req.body.avatar.trim()) {
       await User.findByIdAndUpdate(student.user_id, { avatar: req.body.avatar.trim() });
@@ -756,6 +847,10 @@ export const upsertStaffByUser = async (req, res) => {
 
     STAFF_FIELDS.forEach((field) => {
       if (req.body[field] === undefined) return;
+
+      if (field === "employee_code") {
+        return;
+      }
 
       if (field === "joining_date") {
         staff.joining_date = req.body.joining_date ? new Date(req.body.joining_date) : null;

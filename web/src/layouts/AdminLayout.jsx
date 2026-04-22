@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: "/admin", end: true, label: "Overview", icon: LayoutDashboard },
   { to: "/admin/users", label: "User Management", icon: Users },
   { to: "/admin/students", label: "Students", icon: GraduationCap },
+  { to: "/admin/staff", label: "Staff", icon: Users },
   {
     label: "School Setup",
     icon: Settings2,
@@ -24,8 +25,8 @@ const NAV_ITEMS = [
       { to: "/admin/school-setup/operations", label: "Academic Operations", icon: ClipboardList },
     ],
   },
-  // { to: "/admin/attendance", label: "Attendance Ops", icon: CalendarCheck2 },
-  // { to: "/admin/attendance-audit", label: "Attendance Audit", icon: ShieldCheck },
+  { to: "/admin/attendance", label: "Attendance Ops", icon: CalendarCheck2 },
+  { to: "/admin/attendance-audit", label: "Attendance Audit", icon: ShieldCheck },
 ];
 
 function AdminLayout() {

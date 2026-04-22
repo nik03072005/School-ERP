@@ -266,6 +266,22 @@
 		@apply max-w-7xl;
 	}
 
+	.teacher-attendance-head {
+		@apply gap-4;
+	}
+
+	.teacher-dashboard-shell {
+		@apply mt-6 max-w-7xl space-y-4;
+	}
+
+	.teacher-dashboard-head-actions {
+		@apply flex w-full flex-col gap-2 md:w-auto md:items-end;
+	}
+
+	.teacher-attendance-signout {
+		@apply w-full md:w-auto;
+	}
+
 	.basic-dashboard h1 {
 		@apply text-2xl font-bold;
 	}
@@ -438,6 +454,14 @@
 		@apply grid gap-3 md:grid-cols-2 xl:grid-cols-3;
 	}
 
+	.teacher-attendance-filters-grid {
+		@apply grid-cols-1 sm:grid-cols-2 xl:grid-cols-4;
+	}
+
+	.teacher-attendance-filter-span-2 {
+		@apply sm:col-span-2;
+	}
+
 	.table-filter-actions {
 		@apply flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500;
 	}
@@ -481,6 +505,55 @@
 
 	.table-actions {
 		@apply flex flex-wrap gap-2;
+	}
+
+	.teacher-attendance-table-shell .table-actions {
+		@apply justify-stretch sm:justify-start;
+	}
+
+	.teacher-attendance-table-shell .table-actions .btn {
+		@apply w-full sm:w-auto;
+	}
+
+	.teacher-attendance-table {
+		min-width: 700px;
+	}
+
+	.teacher-attendance-table select,
+	.teacher-attendance-table input {
+		@apply w-full min-w-32;
+	}
+
+	.teacher-record-summary-grid {
+		@apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+	}
+
+	.teacher-record-card {
+		@apply rounded-xl border border-slate-200 bg-slate-50 p-3;
+	}
+
+	.teacher-record-card p {
+		@apply text-xs font-semibold uppercase tracking-[0.08em] text-slate-500;
+	}
+
+	.teacher-record-card h3 {
+		@apply mt-1 text-2xl font-bold text-slate-900;
+	}
+
+	.teacher-settings-grid {
+		@apply grid gap-4 xl:grid-cols-2;
+	}
+
+	.teacher-settings-title {
+		@apply text-lg font-semibold text-slate-900;
+	}
+
+	.teacher-settings-copy {
+		@apply mt-1 text-sm text-slate-500;
+	}
+
+	.teacher-settings-form-grid input:disabled {
+		@apply cursor-not-allowed bg-slate-100 text-slate-500;
 	}
 
 	.empty-state {
@@ -585,6 +658,20 @@
 
 	.modal-actions {
 		@apply mt-4 flex justify-end gap-2;
+	}
+
+	@media (max-width: 640px) {
+		.teacher-attendance-table {
+			min-width: 560px;
+		}
+
+		.teacher-attendance-dashboard {
+			@apply mt-6;
+		}
+
+		.teacher-record-summary-grid {
+			@apply grid-cols-1;
+		}
 	}
 
 }

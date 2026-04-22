@@ -6,7 +6,7 @@ const studentSchema = new mongoose.Schema(
     class_id: { type: mongoose.Schema.Types.ObjectId, ref: "Class" },
     section_id: { type: mongoose.Schema.Types.ObjectId, ref: "Section" },
     admission_no: { type: String, unique: true, sparse: true, trim: true },
-    roll_no: { type: Number },
+    roll_no: { type: String, unique: true, sparse: true, trim: true, uppercase: true },
     admission_date: { type: Date },
 
     // ── Student Info ───────────────────────────────────────────────
@@ -78,6 +78,8 @@ const studentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+studentSchema.index({ class_id: 1, section_id: 1, roll_no: 1 }, { sparse: true });
 
 const Student = mongoose.model("Student", studentSchema);
 

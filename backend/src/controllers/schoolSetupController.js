@@ -2,7 +2,6 @@ import Class from "../models/Class.js";
 import Section from "../models/Section.js";
 import SchoolPeriod from "../models/SchoolPeriod.js";
 import User from "../models/User.js";
-import TeacherAssignment from "../models/TeacherAssignment.js";
 import TimetableEntry from "../models/TimetableEntry.js";
 
 const parseBool = (value) => {
@@ -252,92 +251,6 @@ export const updatePeriod = async (req, res) => {
     if (error.code === 11000) {
       return res.status(409).json({ message: "period_number must be unique" });
     }
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-export const createTeacherAssignment = async (req, res) => {
-  try {
-    const { teacher_user_id, class_id, section_id, is_primary, remarks } = req.body;
-    if (!teacher_user_id || !class_id || !section_id) {
-      return res.status(400).json({ message: "teacher_user_id, class_id and section_id are required" });
-    }
-
-    const teacher = await User.findById(teacher_user_id).populate("role_id", "name");
-    if (!teacher || teacher.role_id?.name !== "teaching_staff") {
-      return res.status(400).json({ message: "teacher_user_id must be a teaching_staff user" });
-    }
-
-    const section = await Section.findById(section_id).select("class_id");
-    if (!section) return res.status(404).json({ message: "Section not found" });
-    if (String(section.class_id) !== String(class_id)) {
-      return res.status(400).json({ message: "section_id does not belong to class_id" });
-    }
-
-    if (is_primary) {
-      await TeacherAssignment.updateMany(
-        { class_id, section_id, is_primary: true },
-        { $set: { is_primary: false } }
-      );
-    }
-
-    const assignment = await TeacherAssignment.findOneAndUpdate(
-      { teacher_user_id, class_id, section_id },
-      {
-        teacher_user_id,
-        class_id,
-        section_id,
-        is_primary: Boolean(is_primary),
-        is_active: true,
-        assigned_by_user_id: req.user._id,
-        remarks: remarks ? String(remarks).trim() : "",
-      },
-      { upsert: true, returnDocument: "after", runValidators: true }
-    )
-      .populate("teacher_user_id", "first_name last_name email")
-      .populate("class_id", "name grade_level")
-      .populate("section_id", "name");
-
-    res.status(201).json({ message: "Teacher assignment saved", assignment });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-export const listTeacherAssignments = async (req, res) => {
-  try {
-    const { class_id, section_id, teacher_user_id } = req.query;
-    const is_active = parseBool(req.query.is_active);
-    const filter = {};
-    if (class_id) filter.class_id = class_id;
-    if (section_id) filter.section_id = section_id;
-    if (teacher_user_id) filter.teacher_user_id = teacher_user_id;
-    if (is_active !== undefined) filter.is_active = is_active;
-
-    const assignments = await TeacherAssignment.find(filter)
-      .populate("teacher_user_id", "first_name last_name email")
-      .populate("class_id", "name grade_level")
-      .populate("section_id", "name")
-      .populate("assigned_by_user_id", "first_name last_name")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({ count: assignments.length, assignments });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-export const deactivateTeacherAssignment = async (req, res) => {
-  try {
-    const assignment = await TeacherAssignment.findByIdAndUpdate(
-      req.params.assignmentId,
-      { is_active: false },
-      { returnDocument: "after" }
-    );
-
-    if (!assignment) return res.status(404).json({ message: "Assignment not found" });
-    res.status(200).json({ message: "Assignment deactivated", assignment });
-  } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

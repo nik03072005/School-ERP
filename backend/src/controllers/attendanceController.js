@@ -4,7 +4,6 @@ import Section from "../models/Section.js";
 import User from "../models/User.js";
 import StudentAttendance from "../models/StudentAttendance.js";
 import StaffAttendance from "../models/StaffAttendance.js";
-import TeacherAssignment from "../models/TeacherAssignment.js";
 import AttendanceAudit from "../models/AttendanceAudit.js";
 
 const ATTENDANCE_STATUSES = ["present", "absent", "late", "half_day", "leave_pending", "leave_approved"];
@@ -31,25 +30,38 @@ const ensureTeacherCanMark = async (reqUser, section, classId, sectionId, emerge
   const isSectionClassTeacher = section.class_teacher_user_id
     && String(section.class_teacher_user_id) === String(reqUser._id);
 
-  const assignment = await TeacherAssignment.findOne({
-    teacher_user_id: reqUser._id,
-    class_id: classId,
-    section_id: sectionId,
-    is_active: true,
-  }).select("_id");
-
-  if (isSectionClassTeacher || assignment) {
+  if (isSectionClassTeacher) {
     return { allowed: true, emergencyOverride: false };
   }
 
   if (!emergencyReason || !String(emergencyReason).trim()) {
     return {
       allowed: false,
-      message: "Emergency reason is required when marking attendance for non-assigned class-section",
+      message: "Emergency reason is required when marking attendance for non-class-teacher section",
     };
   }
 
   return { allowed: true, emergencyOverride: true };
+};
+
+const ensureTeacherCanViewSection = async (reqUser, section) => {
+  const roleName = reqUser?.role_id?.name;
+  if (roleName === "admin") {
+    return { allowed: true };
+  }
+
+  if (roleName !== "teaching_staff") {
+    return { allowed: false, message: "Only admin or teaching staff can view student attendance" };
+  }
+
+  const isSectionClassTeacher = section.class_teacher_user_id
+    && String(section.class_teacher_user_id) === String(reqUser._id);
+
+  if (!isSectionClassTeacher) {
+    return { allowed: false, message: "You can only view attendance for your allotted section" };
+  }
+
+  return { allowed: true };
 };
 
 const createAuditEntries = async (entries) => {
@@ -190,6 +202,17 @@ export const getStudentAttendanceDaily = async (req, res) => {
 
     const date = normalizeDate(attendance_date);
     if (!date) return res.status(400).json({ message: "Invalid attendance_date" });
+
+    const section = await Section.findById(section_id).select("class_id class_teacher_user_id");
+    if (!section) return res.status(404).json({ message: "Section not found" });
+    if (String(section.class_id) !== String(class_id)) {
+      return res.status(400).json({ message: "section_id does not belong to class_id" });
+    }
+
+    const authCheck = await ensureTeacherCanViewSection(req.user, section);
+    if (!authCheck.allowed) {
+      return res.status(403).json({ message: authCheck.message });
+    }
 
     const students = await Student.find({ class_id, section_id })
       .populate("user_id", "first_name last_name")
@@ -393,6 +416,17 @@ export const exportStudentAttendanceCsv = async (req, res) => {
 
     const from = normalizeDate(from_date);
     const to = normalizeDate(to_date) || normalizeDate(new Date());
+
+    const section = await Section.findById(section_id).select("class_id class_teacher_user_id");
+    if (!section) return res.status(404).json({ message: "Section not found" });
+    if (String(section.class_id) !== String(class_id)) {
+      return res.status(400).json({ message: "section_id does not belong to class_id" });
+    }
+
+    const authCheck = await ensureTeacherCanViewSection(req.user, section);
+    if (!authCheck.allowed) {
+      return res.status(403).json({ message: authCheck.message });
+    }
 
     const filter = { class_id, section_id };
     if (from || to) {

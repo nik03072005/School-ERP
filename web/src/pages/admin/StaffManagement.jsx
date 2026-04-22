@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { adminService } from "../../api/adminService";
-import StatusBadge from "../../components/admin/StatusBadge";
 
 const INITIAL_FILTERS = {
   search: "",
+  staff_type: "",
   is_active: "",
 };
 
-function StudentManagement() {
-  const [students, setStudents] = useState([]);
+const isStaffRole = (role) => role === "teaching_staff" || role === "non_teaching_staff";
+const getRoleName = (user) => user?.role_id?.name || user?.role || "";
+
+function StaffManagement() {
+  const [staffUsers, setStaffUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [filters, setFilters] = useState(INITIAL_FILTERS);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalItems: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 20 });
 
-  const loadStudents = useCallback(async (refresh = false) => {
+  const loadStaff = useCallback(async (refresh = false) => {
     try {
       if (refresh) {
         setRefreshing(true);
@@ -27,36 +30,30 @@ function StudentManagement() {
 
       setError("");
 
-      const data = await adminService.getAllUsers({
-        role: "student",
+      const params = {
         search: filters.search || undefined,
         is_active: filters.is_active || undefined,
         sort_by: "createdAt",
         sort_dir: "desc",
-        page: pagination.page,
-        limit: pagination.limit,
-      });
+        page: 1,
+        limit: 500,
+      };
 
-      const nextStudents = data?.users || [];
-      setStudents(nextStudents);
-      setPagination((prev) => ({
-        ...prev,
-        page: data?.pagination?.page || prev.page,
-        limit: data?.pagination?.limit || prev.limit,
-        totalPages: data?.pagination?.totalPages || 1,
-        totalItems: data?.pagination?.totalItems || nextStudents.length,
-      }));
+      const data = await adminService.getAllUsers(params);
+      const nextUsers = (data?.users || []).filter((user) => isStaffRole(getRoleName(user)));
+      nextUsers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setStaffUsers(nextUsers);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to load students.");
+      setError(err?.response?.data?.message || "Failed to load staff users.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters.is_active, filters.search, pagination.limit, pagination.page]);
+  }, [filters.is_active, filters.search]);
 
   useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
+    loadStaff();
+  }, [loadStaff]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -64,18 +61,28 @@ function StudentManagement() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const filteredStudents = useMemo(() => {
-    return students.filter((user) => {
-      const status = user?.student_profile?.admission_status || "not_submitted";
-      return status === "approved";
-    });
-  }, [students]);
+  const filteredStaff = useMemo(() => {
+    if (!filters.staff_type) return staffUsers;
+    return staffUsers.filter((user) => user?.staff_profile?.staff_type === filters.staff_type);
+  }, [filters.staff_type, staffUsers]);
+
+  const totalItems = filteredStaff.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pagination.limit));
+
+  const paginatedStaff = useMemo(() => {
+    const start = (pagination.page - 1) * pagination.limit;
+    return filteredStaff.slice(start, start + pagination.limit);
+  }, [filteredStaff, pagination.limit, pagination.page]);
+
+  useEffect(() => {
+    if (pagination.page > totalPages) {
+      setPagination((prev) => ({ ...prev, page: totalPages }));
+    }
+  }, [pagination.page, totalPages]);
 
   const setFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    if (key === "search" || key === "is_active") {
-      setPagination((prev) => ({ ...prev, page: 1 }));
-    }
+    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
   const clearFilters = () => {
@@ -87,14 +94,14 @@ function StudentManagement() {
     try {
       if (user.is_active) {
         await adminService.deactivateUser(user._id);
-        setNotice("Student account deactivated.");
+        setNotice("Staff account deactivated.");
       } else {
         await adminService.activateUser(user._id);
-        setNotice("Student account activated.");
+        setNotice("Staff account activated.");
       }
-      await loadStudents(true);
+      await loadStaff(true);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to update student account status.");
+      setError(err?.response?.data?.message || "Failed to update staff account status.");
     }
   };
 
@@ -102,11 +109,11 @@ function StudentManagement() {
     <section className="space-y-4">
       <article className="panel panel-soft flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Students</h2>
-          <p className="text-sm text-slate-600">Review approved students, class assignment, and roll numbers.</p>
+          <h2 className="text-2xl font-bold text-slate-900">Staff</h2>
+          <p className="text-sm text-slate-600">Review employee codes, staff details, and account activity.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="btn btn-secondary" onClick={() => loadStudents(true)} disabled={refreshing}>
+          <button type="button" className="btn btn-secondary" onClick={() => loadStaff(true)} disabled={refreshing}>
             {refreshing ? "Refreshing..." : "Refresh"}
           </button>
         </div>
@@ -121,6 +128,15 @@ function StudentManagement() {
               onChange={(event) => setFilter("search", event.target.value)}
               placeholder="Name, email or mobile"
             />
+          </label>
+
+          <label>
+            Staff Type
+            <select value={filters.staff_type} onChange={(event) => setFilter("staff_type", event.target.value)}>
+              <option value="">All</option>
+              <option value="teaching_staff">Teaching Staff</option>
+              <option value="non_teaching_staff">Non-Teaching Staff</option>
+            </select>
           </label>
 
           <label>
@@ -149,40 +165,34 @@ function StudentManagement() {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Contact</th>
-                  <th>Roll Number</th>
-                  <th>Class</th>
-                  <th>Section</th>
-                  <th>Admission</th>
+                  <th>Staff</th>
+                  <th>Type</th>
+                  <th>Employee Code</th>
+                  <th>Designation</th>
+                  <th>Department</th>
                   <th>Activity</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredStudents.length === 0 ? (
+                {paginatedStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={8}><p className="empty-state">No approved students found for selected filters.</p></td>
+                    <td colSpan={7}><p className="empty-state">No staff found for selected filters.</p></td>
                   </tr>
                 ) : (
-                  filteredStudents.map((user) => {
-                    const profile = user?.student_profile;
-                    const admissionStatus = profile?.admission_status || "not_submitted";
-                    const className = profile?.class_id?.name || profile?.class_applying || "Not assigned";
-                    const sectionName = profile?.section_id?.name || "-";
-                    const rollNumber = profile?.roll_no || "-";
-
+                  paginatedStaff.map((user) => {
+                    const profile = user?.staff_profile;
+                    const staffType = profile?.staff_type || getRoleName(user) || "-";
                     return (
                       <tr key={user._id}>
                         <td>
                           <div className="table-primary">{user.first_name} {user.last_name}</div>
                           <p className="table-secondary">{user.email}</p>
                         </td>
-                        <td>{user.mobile || "-"}</td>
-                        <td>{rollNumber}</td>
-                        <td>{className}</td>
-                        <td>{sectionName}</td>
-                        <td><StatusBadge status={admissionStatus} /></td>
+                        <td>{staffType === "teaching_staff" ? "Teaching" : "Non-Teaching"}</td>
+                        <td>{profile?.employee_code || "-"}</td>
+                        <td>{profile?.designation || "-"}</td>
+                        <td>{profile?.department || "-"}</td>
                         <td>
                           <span className={`activity-pill ${user.is_active ? "active" : "inactive"}`}>
                             {user.is_active ? "Active" : "Inactive"}
@@ -190,13 +200,8 @@ function StudentManagement() {
                         </td>
                         <td>
                           <div className="table-actions">
-                            {profile?._id ? (
-                              <Link className="btn btn-secondary" to={`/admin/admissions/${profile._id}`}>
-                                View Details
-                              </Link>
-                            ) : null}
-                            <Link className="btn btn-secondary" to={`/admin/admissions/edit/${user._id}`}>
-                              {profile?._id ? "Update Form" : "Open Form"}
+                            <Link className="btn btn-secondary" to={`/admin/staff/edit/${user._id}`}>
+                              Edit Details
                             </Link>
                             <button type="button" className={user.is_active ? "btn btn-danger" : "btn btn-primary"} onClick={() => toggleActive(user)}>
                               {user.is_active ? "Deactivate" : "Activate"}
@@ -220,12 +225,12 @@ function StudentManagement() {
             >
               Previous
             </button>
-            <span>Page {pagination.page} of {pagination.totalPages}</span>
+            <span>Page {pagination.page} of {totalPages}</span>
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(prev.page + 1, pagination.totalPages) }))}
-              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(prev.page + 1, totalPages) }))}
+              disabled={pagination.page >= totalPages}
             >
               Next
             </button>
@@ -236,4 +241,4 @@ function StudentManagement() {
   );
 }
 
-export default StudentManagement;
+export default StaffManagement;

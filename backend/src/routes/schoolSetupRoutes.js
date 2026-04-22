@@ -10,9 +10,6 @@ import {
   createPeriod,
   listPeriods,
   updatePeriod,
-  createTeacherAssignment,
-  listTeacherAssignments,
-  deactivateTeacherAssignment,
   createTimetableEntry,
   listTimetableEntries,
   listTeacherTimetable,
@@ -35,10 +32,6 @@ router.patch("/sections/:sectionId/assign-class-teacher", authorize("admin"), as
 router.post("/periods", authorize("admin"), createPeriod);
 router.get("/periods", authorize("admin"), listPeriods);
 router.patch("/periods/:periodId", authorize("admin"), updatePeriod);
-
-router.post("/teacher-assignments", authorize("admin"), createTeacherAssignment);
-router.get("/teacher-assignments", authorize("admin"), listTeacherAssignments);
-router.patch("/teacher-assignments/:assignmentId/deactivate", authorize("admin"), deactivateTeacherAssignment);
 
 router.post("/timetable", authorize("admin"), createTimetableEntry);
 router.get("/timetable", authorize("admin"), listTimetableEntries);

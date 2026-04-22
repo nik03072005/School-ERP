@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
+    "rollno:rebuild": "node src/scripts/rebuildStudentRollNumbers.js",
+    "empcode:rebuild": "node src/scripts/rebuildEmployeeCodes.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
