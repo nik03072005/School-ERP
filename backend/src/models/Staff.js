@@ -54,39 +54,34 @@ const staffSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-staffSchema.pre("validate", async function assignEmployeeCode(next) {
-  try {
-    if (this.employee_code) {
-      this.employee_code = String(this.employee_code).trim().toUpperCase();
-      return next();
-    }
-
-    if (!this.staff_type) {
-      return next();
-    }
-
-    const counterKey = `employee_code_${this.staff_type}`;
-    let generatedCode = "";
-
-    while (!generatedCode) {
-      const counter = await Counter.findOneAndUpdate(
-        { key: counterKey },
-        { $inc: { seq: 1 } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-
-      const candidateCode = buildEmployeeCode(this.staff_type, counter.seq);
-      const alreadyExists = await mongoose.models.Staff.exists({ employee_code: candidateCode });
-      if (!alreadyExists) {
-        generatedCode = candidateCode;
-      }
-    }
-
-    this.employee_code = generatedCode;
-    return next();
-  } catch (error) {
-    return next(error);
+staffSchema.pre("validate", async function assignEmployeeCode() {
+  if (this.employee_code) {
+    this.employee_code = String(this.employee_code).trim().toUpperCase();
+    return;
   }
+
+  if (!this.staff_type) {
+    return;
+  }
+
+  const counterKey = `employee_code_${this.staff_type}`;
+  let generatedCode = "";
+
+  while (!generatedCode) {
+    const counter = await Counter.findOneAndUpdate(
+      { key: counterKey },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+    );
+
+    const candidateCode = buildEmployeeCode(this.staff_type, counter.seq);
+    const alreadyExists = await mongoose.models.Staff.exists({ employee_code: candidateCode });
+    if (!alreadyExists) {
+      generatedCode = candidateCode;
+    }
+  }
+
+  this.employee_code = generatedCode;
 });
 
 const Staff = mongoose.model("Staff", staffSchema);

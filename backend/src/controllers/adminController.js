@@ -354,6 +354,7 @@ export const createUser = async (req, res) => {
 
   try {
     const { first_name, last_name, email, password, mobile, avatar, role } = req.body;
+    // console.log(first_name,role)
 
     if (!first_name || !last_name || !email || !password || !role) {
       return res.status(400).json({ message: "Please provide all required fields" });
@@ -381,17 +382,30 @@ export const createUser = async (req, res) => {
       is_active: true,
       created_by: req.user._id,
     });
+   
 
     if (role === "teaching_staff" || role === "non_teaching_staff") {
-      await Staff.create({ user_id: createdUser._id, staff_type: role });
+      try {
+        
+        await Staff.create({ user_id: createdUser._id, staff_type: role });
+      } catch (error) {
+        console.log(error)
+      }
     } else if (role === "student") {
-      await Student.create({ user_id: createdUser._id });
+      try {
+        
+        await Student.create({ user_id: createdUser._id });
+      } catch (error) {
+        console.log(error)
+      }
     }
-
+    //  console.log("object")
     const created = await User.findById(createdUser._id)
       .select("-password")
       .populate("role_id", "name")
       .populate("created_by", "first_name last_name email");
+
+      // console.log(created)
 
     res.status(201).json({
       message: "User created successfully",
