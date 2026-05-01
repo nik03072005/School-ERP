@@ -107,13 +107,18 @@ export const register = async (req, res) => {
 // @access  Public
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Please provide email and password" });
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "Please provide email or phone number, and password" });
     }
 
-    const user = await User.findOne({ email }).populate("role_id", "name");
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
+    const query = isEmail
+      ? { email: identifier.trim().toLowerCase() }
+      : { mobile: identifier.trim() };
+
+    const user = await User.findOne(query).populate("role_id", "name");
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }

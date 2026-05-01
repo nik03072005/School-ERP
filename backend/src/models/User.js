@@ -33,6 +33,7 @@ const userSchema = new mongoose.Schema(
     mobile: {
       type: String,
       trim: true,
+      required: true,
     },
     avatar: {
       type: String,

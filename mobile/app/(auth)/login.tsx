@@ -20,22 +20,22 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
+  const [identifierFocused, setIdentifierFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+    if (!identifier.trim() || !password) {
+      Alert.alert('Missing fields', 'Please enter your email or phone number and password.');
       return;
     }
 
     setLoading(true);
     try {
-      await login({ email: email.trim().toLowerCase(), password });
+      await login({ identifier: identifier.trim(), password });
       router.replace('/(app)/' as any);
     } catch (err: any) {
       const msg =
@@ -70,21 +70,21 @@ export default function LoginScreen() {
             <Text style={styles.cardTitle}>Welcome back 👋</Text>
             <Text style={styles.cardSub}>Sign in to your account</Text>
 
-            {/* Email */}
-            <Text style={styles.label}>Email</Text>
-            <View style={[styles.inputWrap, emailFocused && styles.inputFocused]}>
-              <Ionicons name="mail-outline" size={18} color={emailFocused ? Brand.blueDark : Colors.placeholder} style={styles.inputIcon} />
+            {/* Email or Phone */}
+            <Text style={styles.label}>Email or Phone Number</Text>
+            <View style={[styles.inputWrap, identifierFocused && styles.inputFocused]}>
+              <Ionicons name="person-outline" size={18} color={identifierFocused ? Brand.blueDark : Colors.placeholder} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="you@school.com"
+                placeholder="you@school.com or 9876543210"
                 placeholderTextColor={Colors.placeholder}
-                keyboardType="email-address"
+                keyboardType="default"
                 autoCapitalize="none"
                 autoCorrect={false}
-                value={email}
-                onChangeText={setEmail}
-                onFocus={() => setEmailFocused(true)}
-                onBlur={() => setEmailFocused(false)}
+                value={identifier}
+                onChangeText={setIdentifier}
+                onFocus={() => setIdentifierFocused(true)}
+                onBlur={() => setIdentifierFocused(false)}
               />
             </View>
 

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
-	const [form, setForm] = useState({ email: "", password: "" });
+	const [form, setForm] = useState({ identifier: "", password: "" });
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 
@@ -15,8 +15,8 @@ function Login() {
 		event.preventDefault();
 		setError("");
 
-		if (!form.email.trim() || !form.password) {
-			setError("Email and password are required.");
+		if (!form.identifier.trim() || !form.password) {
+			setError("Email or phone number, and password are required.");
 			return;
 		}
 
@@ -24,7 +24,7 @@ function Login() {
 
 		try {
 			const user = await login({
-				email: form.email.trim().toLowerCase(),
+				identifier: form.identifier.trim(),
 				password: form.password,
 			});
 
@@ -54,12 +54,12 @@ function Login() {
 
 				<form onSubmit={handleSubmit} className="auth-form">
 					<label>
-						Email
-						<input
-							type="email"
-							value={form.email}
-							onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-						/>
+					Email or Phone Number
+					<input
+						type="text"
+						value={form.identifier}
+						placeholder="you@school.com or 9876543210"
+						onChange={(e) => setForm((prev) => ({ ...prev, identifier: e.target.value }))}></input>
 					</label>
 
 					<label>
