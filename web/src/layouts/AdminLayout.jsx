@@ -48,7 +48,7 @@ function AdminLayout() {
         ].join(" ")}
       >
         <div className="rounded-2xl bg-linear-to-br from-cyan-500 to-cyan-700 p-4 text-white">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-100">School ERP</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-100">Kidz Galaxy</p>
           <h1 className="mt-2 text-2xl font-bold">Admin Console</h1>
         </div>
 
