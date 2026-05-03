@@ -46,7 +46,7 @@ function Login() {
 	return (
 		<div className="auth-page">
 			<div className="auth-card">
-				<p className="auth-kicker">School ERP</p>
+				<p className="auth-kicker">Kidz Galaxy</p>
 				<h1>Sign In</h1>
 				<p className="auth-copy">Access administration tools and student management workflows.</p>
 
