@@ -20,17 +20,26 @@ const startServer = async () => {
 
   const app = express();
 
-  const corsOrigin = process.env.CORS_ORIGIN || "https://erp.kidzgalaxy.org";
+  const corsOriginEnv = process.env.CORS_ORIGIN || "https://erp.kidzgalaxy.org";
+  const allowedOrigins = corsOriginEnv
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.use(
     cors({
-      origin: corsOrigin,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error("Not allowed by CORS"));
+      },
       credentials: true,
     })
   );
   app.use(express.json());
 
   app.get("/", (req, res) => {
-    res.send("School ERP API Running");
+    res.send("Kidz Galaxy API Running");
   });
 
   app.use("/api/auth", authRoutes);
