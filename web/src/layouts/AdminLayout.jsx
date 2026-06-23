@@ -1,16 +1,25 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
+  BarChart3,
   BookCopy,
+  BookOpen,
+  Cake,
   CalendarCheck2,
+  CalendarOff,
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
+  Megaphone,
+  MessageSquare,
+  NotebookPen,
+  PlaySquare,
   Settings2,
   ShieldCheck,
   Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import NotificationBell from "../components/NotificationBell";
 
 const NAV_ITEMS = [
   { to: "/admin", end: true, label: "Overview", icon: LayoutDashboard },
@@ -27,6 +36,14 @@ const NAV_ITEMS = [
   },
   { to: "/admin/attendance", label: "Attendance Ops", icon: CalendarCheck2 },
   { to: "/admin/attendance-audit", label: "Attendance Audit", icon: ShieldCheck },
+  { to: "/admin/logbook", label: "Daily Logbook", icon: BookOpen },
+  { to: "/admin/notices", label: "Notices", icon: Megaphone },
+  { to: "/admin/leaves", label: "Leave Applications", icon: CalendarOff },
+  { to: "/admin/parent-notes", label: "Parent Queries", icon: MessageSquare },
+  { to: "/admin/exams", label: "Exam Schedules", icon: NotebookPen },
+  { to: "/admin/progress-reports", label: "Progress Reports", icon: BarChart3 },
+  { to: "/admin/learning", label: "Learning Goals", icon: PlaySquare },
+  { to: "/admin/birthdays", label: "Birthdays", icon: Cake },
 ];
 
 function AdminLayout() {
@@ -133,6 +150,9 @@ function AdminLayout() {
             <p className="text-xs text-slate-500">
               {user?.first_name} {user?.last_name} ({user?.role})
             </p>
+          </div>
+          <div className="ml-auto">
+            <NotificationBell />
           </div>
         </header>
 

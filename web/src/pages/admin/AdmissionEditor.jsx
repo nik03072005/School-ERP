@@ -64,6 +64,8 @@ function AdmissionEditor() {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
 
+  const GENDER_OPTIONS = ["male", "female", "other"];
+  const RELATIONSHIP_OPTIONS = ["mother", "father", "other"];
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -240,11 +242,18 @@ function AdmissionEditor() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Gender</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.gender} onChange={(e) => setField("gender", e.target.value.toLowerCase().trim())} />
+              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.gender} onChange={(e) => setField("gender", e.target.value.toLowerCase().trim())} >
+                <option value="">Select gender</option>
+                {GENDER_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Date of Birth</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.date_of_birth || ""} onChange={(e) => setField("date_of_birth", e.target.value)} />
+              <input type="date" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.date_of_birth || ""} onChange={(e) => setField("date_of_birth", e.target.value)} />
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Class Applying</span>
@@ -343,11 +352,17 @@ function AdmissionEditor() {
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Relationship</span>
-              <input
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 value={form.primary_guardian_relationship || ""}
-                onChange={(e) => setField("primary_guardian_relationship", e.target.value.toLowerCase().trim())}
-              />
+                onChange={(e) => setField("primary_guardian_relationship", e.target.value.toLowerCase().trim())}>
+                {
+                  RELATIONSHIP_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </option>
+                  ))
+                }
+              </select>
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Primary Guardian Phone</span>
@@ -371,7 +386,14 @@ function AdmissionEditor() {
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Secondary Relationship</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.secondary_guardian_relationship || ""} onChange={(e) => setField("secondary_guardian_relationship", e.target.value.toLowerCase().trim())} />
+              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.secondary_guardian_relationship || ""} onChange={(e) => setField("secondary_guardian_relationship", e.target.value.toLowerCase().trim())} >
+                <option value="">Select relationship</option>
+                {RELATIONSHIP_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Secondary Guardian Phone</span>
@@ -395,7 +417,14 @@ function AdmissionEditor() {
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Emergency Contact Relationship</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.emergency_contact_relationship || ""} onChange={(e) => setField("emergency_contact_relationship", e.target.value)} />
+              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.emergency_contact_relationship || ""} onChange={(e) => setField("emergency_contact_relationship", e.target.value)} >
+                <option value="">Select relationship</option>
+                {RELATIONSHIP_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <span className="mb-1 block text-sm font-medium text-slate-700">Emergency Contact Phone</span>

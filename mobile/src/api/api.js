@@ -2,8 +2,8 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "school_erp_token";
-const CLOUD_API_URL = "https://school-erp-c90u.onrender.com/api";
-const LAN_API_URL = "http://192.168.94.235:5000/api";
+// const CLOUD_API_URL = "https://school-erp-c90u.onrender.com/api";
+const LAN_API_URL = "http://192.168.31.29:5000/api";
 
 const resolveApiBaseUrl = () => {
   // Preferred override for all environments.

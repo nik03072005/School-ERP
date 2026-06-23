@@ -3,6 +3,7 @@ import {
   markStudentAttendanceBulk,
   getStudentAttendanceDaily,
   getStudentAttendanceSummary,
+  getMyStudentAttendance,
   markStaffAttendanceBulk,
   getStaffAttendanceDaily,
   exportStudentAttendanceCsv,
@@ -16,6 +17,8 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.use(protect);
+
+router.get("/students/me", getMyStudentAttendance);
 
 router.post("/students/mark-bulk", authorize("admin", "teaching_staff"), markStudentAttendanceBulk);
 router.get("/students/daily", authorize("admin", "teaching_staff"), getStudentAttendanceDaily);

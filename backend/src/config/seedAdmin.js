@@ -20,6 +20,7 @@ const seedAdmin = async () => {
       last_name: "Admin",
       email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD,
+      mobile: process.env.ADMIN_MOBILE,
       role_id: adminRole._id,
       status: "approved",
       is_active: true,

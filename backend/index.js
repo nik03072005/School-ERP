@@ -10,6 +10,14 @@ import studentRoutes from "./src/routes/studentRoutes.js";
 import uploadRoutes from "./src/routes/uploadRoutes.js";
 import schoolSetupRoutes from "./src/routes/schoolSetupRoutes.js";
 import attendanceRoutes from "./src/routes/attendanceRoutes.js";
+import notificationRoutes from "./src/routes/notificationRoutes.js";
+import logbookRoutes from "./src/routes/logbookRoutes.js";
+import noticeRoutes from "./src/routes/noticeRoutes.js";
+import leaveRoutes from "./src/routes/leaveRoutes.js";
+import parentNoteRoutes from "./src/routes/parentNoteRoutes.js";
+import examRoutes from "./src/routes/examRoutes.js";
+import progressReportRoutes from "./src/routes/progressReportRoutes.js";
+import learningRoutes from "./src/routes/learningRoutes.js";
 
 dotenv.config();
 
@@ -48,6 +56,14 @@ const startServer = async () => {
   app.use("/api/uploads", uploadRoutes);
   app.use("/api/setup", schoolSetupRoutes);
   app.use("/api/attendance", attendanceRoutes);
+  app.use("/api/notifications", notificationRoutes);
+  app.use("/api/logbook", logbookRoutes);
+  app.use("/api/notices", noticeRoutes);
+  app.use("/api/leaves", leaveRoutes);
+  app.use("/api/parent-notes", parentNoteRoutes);
+  app.use("/api/exams", examRoutes);
+  app.use("/api/progress-reports", progressReportRoutes);
+  app.use("/api/learning", learningRoutes);
 
   app.listen(process.env.PORT, () =>
     console.log(`Server running on port ${process.env.PORT}`)

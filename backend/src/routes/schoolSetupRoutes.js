@@ -21,7 +21,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post("/classes", authorize("admin"), createClass);
-router.get("/classes", authorize("admin"), listClasses);
+router.get("/classes", authorize("admin", "teaching_staff"), listClasses);
 router.patch("/classes/:classId", authorize("admin"), updateClass);
 
 router.post("/sections", authorize("admin"), createSection);

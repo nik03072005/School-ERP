@@ -637,3 +637,41 @@ export const listAttendanceAudits = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// @desc    Get logged-in student's own attendance records
+// @route   GET /api/attendance/students/me
+// @access  Any authenticated user (student views their own)
+export const getMyStudentAttendance = async (req, res) => {
+  try {
+    const { from_date, to_date, checkpoint } = req.query;
+
+    const student = await Student.findOne({ user_id: req.user._id })
+      .populate("class_id", "name grade")
+      .populate("section_id", "name");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student profile not found" });
+    }
+
+    const filter = { student_id: student._id };
+    if (from_date || to_date) {
+      filter.attendance_date = {};
+      if (from_date) filter.attendance_date.$gte = normalizeDate(from_date);
+      if (to_date) filter.attendance_date.$lte = normalizeDate(to_date);
+    }
+    if (checkpoint) filter.checkpoint = checkpoint;
+
+    const records = await StudentAttendance.find(filter)
+      .sort({ attendance_date: -1, checkpoint: 1 })
+      .lean();
+
+    const summary = records.reduce((acc, r) => {
+      acc[r.status] = (acc[r.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    res.json({ student, records, summary, total: records.length });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch attendance", error: error.message });
+  }
+};

@@ -1,11 +1,15 @@
 import express from "express";
-import { getMyAdmissionForm } from "../controllers/studentController.js";
+import { getMyAdmissionForm, getUpcomingBirthdays } from "../controllers/studentController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.use(protect, authorize("student"));
+router.use(protect);
 
-router.get("/admission", getMyAdmissionForm);
+// Birthdays accessible to all authenticated users (student, teacher, admin)
+router.get("/birthdays", getUpcomingBirthdays);
+
+// Student-only routes
+router.get("/admission", authorize("student"), getMyAdmissionForm);
 
 export default router;

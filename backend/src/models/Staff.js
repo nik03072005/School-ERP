@@ -46,6 +46,9 @@ const staffSchema = new mongoose.Schema(
       enum: ["teaching_staff", "non_teaching_staff"],
       required: true,
     },
+    date_of_birth: {
+      type: Date,
+    },
     is_active: {
       type: Boolean,
       default: true,

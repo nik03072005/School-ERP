@@ -3,8 +3,47 @@ import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Staff from "../models/Staff.js";
 import Role from "../models/Role.js";
+import Notification from "../models/Notification.js";
+
+const isSameDayOfYear = (date) => {
+  if (!date) return false;
+  const today = new Date();
+  return date.getDate() === today.getDate() && date.getMonth() === today.getMonth();
+};
+
+const parseDDMMYYYY = (str) => {
+  if (!str) return null;
+  const parts = str.split("/");
+  if (parts.length !== 3) return null;
+  const [d, m, y] = parts.map(Number);
+  if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
+  return new Date(y, m - 1, d);
+};
+
+const maybeFireBirthdayNotification = async (userId) => {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const exists = await Notification.findOne({
+      user: userId,
+      type: "birthday",
+      createdAt: { $gte: startOfDay },
+    }).lean();
+    if (!exists) {
+      await Notification.create({
+        user: userId,
+        type: "birthday",
+        title: "Happy Birthday!",
+        message: "Wishing you a wonderful birthday from everyone at Kidz Galaxy!",
+      });
+    }
+  } catch {
+    // non-critical
+  }
+};
 
 const buildUserPayload = async (user) => {
+  const role = user.role_id?.name ?? user.role_id;
   const payload = {
     id: user._id,
     first_name: user.first_name,
@@ -12,14 +51,28 @@ const buildUserPayload = async (user) => {
     email: user.email,
     mobile: user.mobile,
     avatar: user.avatar,
-    role: user.role_id?.name ?? user.role_id,
+    role,
     status: user.status,
     is_active: user.is_active,
+    birthdayToday: false,
   };
-  if ((user.role_id?.name ?? user.role_id) === "student") {
-    const studentDoc = await Student.findOne({ user_id: user._id }).select("admission_status");
+
+  if (role === "student") {
+    const studentDoc = await Student.findOne({ user_id: user._id }).select(
+      "admission_status date_of_birth"
+    );
     payload.admission_status = studentDoc?.admission_status ?? "not_submitted";
+    const dob = parseDDMMYYYY(studentDoc?.date_of_birth);
+    payload.birthdayToday = isSameDayOfYear(dob);
+  } else if (role === "teaching_staff" || role === "non_teaching_staff") {
+    const staffDoc = await Staff.findOne({ user_id: user._id }).select("date_of_birth");
+    payload.birthdayToday = isSameDayOfYear(staffDoc?.date_of_birth ?? null);
   }
+
+  if (payload.birthdayToday) {
+    maybeFireBirthdayNotification(user._id).catch(() => {});
+  }
+
   return payload;
 };
 

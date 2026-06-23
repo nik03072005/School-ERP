@@ -1,7 +1,13 @@
-import AppRouter from "./routes/AppRouter"
+import AppRouter from "./routes/AppRouter";
+import BirthdayPopup from "./components/BirthdayPopup";
 
 function App() {
-	return <AppRouter />
+  return (
+    <>
+      <AppRouter />
+      <BirthdayPopup />
+    </>
+  );
 }
 
-export default App
+export default App;
