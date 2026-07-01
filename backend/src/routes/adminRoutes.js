@@ -17,6 +17,7 @@ import {
   rejectAdmission,
   getStaffByUser,
   upsertStaffByUser,
+  getStudents,
 } from "../controllers/adminController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -43,6 +44,9 @@ router.get("/admissions/:studentId", getStudentAdmission);
 router.put("/admissions/:studentId", upsertStudentAdmission);
 router.patch("/admissions/:studentId/approve", approveAdmission);
 router.patch("/admissions/:studentId/reject", rejectAdmission);
+
+// Student list (for marks entry)
+router.get("/students", getStudents);
 
 // Staff detail routes
 router.get("/staff/by-user/:userId", getStaffByUser);

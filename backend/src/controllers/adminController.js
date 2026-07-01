@@ -945,3 +945,24 @@ export const upsertStaffByUser = async (req, res) => {
   }
 };
 
+// @desc    Get students filtered by class/section (for marks entry)
+// @route   GET /api/admin/students
+// @access  Admin
+export const getStudents = async (req, res) => {
+  try {
+    const { class_id, section_id, limit = "200" } = req.query;
+    const filter = {};
+    if (class_id) filter.class_id = class_id;
+    if (section_id) filter.section_id = section_id;
+
+    const students = await Student.find(filter)
+      .populate("user_id", "first_name last_name")
+      .select("_id user_id roll_no admission_no class_id section_id")
+      .sort({ roll_no: 1, _id: 1 })
+      .limit(Number(limit));
+
+    res.status(200).json({ count: students.length, students });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
