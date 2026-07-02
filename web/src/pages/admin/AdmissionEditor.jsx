@@ -414,7 +414,9 @@ function AdmissionEditor() {
             <label>
               <Label text="Primary Guardian Phone" fieldKey="primary_guardian_phone" />
               <input className={inputCls(errors, "primary_guardian_phone")} value={form.primary_guardian_phone || ""} onChange={(e) => setField("primary_guardian_phone", e.target.value)} />
-              {errors.primary_guardian_phone && <p className="mt-1 text-xs text-rose-600">Phone number is required.</p>}
+              {errors.primary_guardian_phone
+                ? <p className="mt-1 text-xs text-rose-600">Phone number is required.</p>
+                : <p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><span>📲</span> WhatsApp notifications (attendance, notices, fees) will be sent to this number.</p>}
             </label>
             <label>
               <Label text="Primary Guardian Email" fieldKey="primary_guardian_email" />

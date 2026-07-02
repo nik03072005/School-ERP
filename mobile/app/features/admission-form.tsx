@@ -373,6 +373,7 @@ export default function AdmissionFormScreen() {
           )}
           <Field label="Phone" value={form.primary_guardian_phone} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_phone', v)} keyboardType="phone-pad"
             required hasError={fieldErrors.has('primary_guardian_phone')} />
+          <Text style={s.infoTip}>📲 WhatsApp notifications (attendance, notices, fees) will be sent to this number.</Text>
           <Field label="Email" value={form.primary_guardian_email} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_email', v)} keyboardType="email-address" />
           <Field label="Address" value={form.primary_guardian_address} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_address', v)} multiline />
         </Section>
@@ -531,6 +532,7 @@ const s = StyleSheet.create({
   boolText: { color: Colors.textSecondary, fontSize: 12, fontWeight: '600' },
   boolTextActive: { color: Brand.blueDark },
 
+  infoTip: { marginTop: -4, marginBottom: 6, color: Colors.textSecondary, fontSize: 11 },
   warningText: { marginTop: -4, marginBottom: 6, color: Colors.error, fontSize: 11, fontWeight: '600' },
 
   saveBtn: {
