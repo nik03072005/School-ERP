@@ -6,6 +6,7 @@ import {
   Cake,
   CalendarCheck2,
   CalendarOff,
+  DollarSign,
   GraduationCap,
   LayoutDashboard,
   Megaphone,
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: "/student/notices", label: "Notices", icon: Megaphone },
   { to: "/student/leave", label: "Leave", icon: CalendarOff },
   { to: "/student/results", label: "My Results", icon: BarChart3 },
+  // { to: "/student/fees", label: "My Fees", icon: DollarSign },
   { to: "/student/queries", label: "Queries", icon: MessageSquare },
   { to: "/student/birthdays", label: "Birthdays", icon: Cake },
 ];

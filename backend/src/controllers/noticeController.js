@@ -1,6 +1,9 @@
 import Notice from "../models/Notice.js";
 import { createNotification } from "./notificationController.js";
 import User from "../models/User.js";
+import Role from "../models/Role.js";
+import Student from "../models/Student.js";
+import { sendNoticeWhatsApp } from "../services/whatsappService.js";
 
 // @desc    Create a notice
 // @route   POST /api/notices
@@ -148,21 +151,20 @@ function buildAudienceFilter(role) {
 async function pushNoticeNotifications(notice) {
   const audienceRoleMap = {
     all: null,
-    students: "student",
+    students: ["student"],
     staff: ["teaching_staff", "non_teaching_staff"],
-    parents: "student",
+    parents: ["student"],
   };
 
-  const roleFilter = audienceRoleMap[notice.target_audience];
+  const roleNames = audienceRoleMap[notice.target_audience];
   const userFilter = { is_active: true, status: "approved" };
 
-  if (roleFilter) {
-    const roles = Array.isArray(roleFilter) ? roleFilter : [roleFilter];
-    // We'll push to all users — role filtering is approximate here
-    // (a proper implementation would join with the Role collection)
+  if (roleNames) {
+    const roles = await Role.find({ name: { $in: roleNames } }).select("_id").lean();
+    userFilter.role_id = { $in: roles.map((role) => role._id) };
   }
 
-  const users = await User.find(userFilter, "_id").lean();
+  const users = await User.find(userFilter, "_id mobile").lean();
   const notifications = users.map((u) =>
     createNotification({
       userId: u._id,
@@ -173,4 +175,24 @@ async function pushNoticeNotifications(notice) {
     })
   );
   await Promise.allSettled(notifications);
+
+  sendNoticeWhatsAppNotifications(notice, users).catch(() => {});
+}
+
+async function sendNoticeWhatsAppNotifications(notice, users) {
+  const userIds = users.map((u) => u._id);
+  const students = await Student.find({ user_id: { $in: userIds } })
+    .select("user_id primary_guardian_phone guardian_mobile")
+    .lean();
+  const guardianPhoneByUserId = new Map(
+    students.map((s) => [String(s.user_id), s.primary_guardian_phone || s.guardian_mobile])
+  );
+
+  await Promise.allSettled(
+    users.map((u) => {
+      const phone = guardianPhoneByUserId.get(String(u._id)) || u.mobile;
+      const receiverName = `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Parent";
+      return sendNoticeWhatsApp({ phone, title: notice.title, content: notice.content, receiverName });
+    })
+  );
 }

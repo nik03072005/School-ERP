@@ -2,9 +2,11 @@ import Student from "../models/Student.js";
 import Staff from "../models/Staff.js";
 import Section from "../models/Section.js";
 import User from "../models/User.js";
+import Class from "../models/Class.js";
 import StudentAttendance from "../models/StudentAttendance.js";
 import StaffAttendance from "../models/StaffAttendance.js";
 import AttendanceAudit from "../models/AttendanceAudit.js";
+import { sendAttendanceWhatsApp } from "../services/whatsappService.js";
 
 const ATTENDANCE_STATUSES = ["present", "absent", "late", "half_day", "leave_pending", "leave_approved"];
 const CHECKPOINTS = ["start", "end"];
@@ -67,6 +69,30 @@ const ensureTeacherCanViewSection = async (reqUser, section) => {
 const createAuditEntries = async (entries) => {
   if (!entries.length) return;
   await AttendanceAudit.insertMany(entries, { ordered: false });
+};
+
+const WHATSAPP_STATUSES = ["present", "absent", "late"];
+
+const notifyGuardiansViaWhatsApp = async (records, className) => {
+  const notifiable = records.filter((record) => WHATSAPP_STATUSES.includes(record.status));
+  if (!notifiable.length) return;
+
+  await Promise.allSettled(
+    notifiable.map((record) => {
+      const student = record.student_id;
+      const phone = student?.primary_guardian_phone || student?.guardian_mobile;
+      const studentName = student?.user_id ? `${student.user_id.first_name} ${student.user_id.last_name}` : "";
+      const receiverName = student?.primary_guardian_name || "Parent";
+      return sendAttendanceWhatsApp({
+        phone,
+        studentName,
+        className,
+        status: record.status,
+        date: record.attendance_date,
+        receiverName,
+      });
+    })
+  );
 };
 
 export const markStudentAttendanceBulk = async (req, res) => {
@@ -156,7 +182,7 @@ export const markStudentAttendanceBulk = async (req, res) => {
       .populate("emergency_override_by_user_id", "first_name last_name email")
       .populate({
         path: "student_id",
-        select: "user_id",
+        select: "user_id primary_guardian_phone guardian_mobile",
         populate: { path: "user_id", select: "first_name last_name" },
       })
       .sort({ updatedAt: -1 });
@@ -188,6 +214,12 @@ export const markStudentAttendanceBulk = async (req, res) => {
       emergency_override: authCheck.emergencyOverride,
       records: saved,
     });
+
+    Class.findById(class_id)
+      .select("name")
+      .lean()
+      .then((classDoc) => notifyGuardiansViaWhatsApp(saved, classDoc?.name || ""))
+      .catch(() => {});
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

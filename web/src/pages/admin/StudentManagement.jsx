@@ -151,6 +151,7 @@ function StudentManagement() {
                 <tr>
                   <th>Student</th>
                   <th>Contact</th>
+                  <th>Admission No</th>
                   <th>Roll Number</th>
                   <th>Class</th>
                   <th>Section</th>
@@ -162,12 +163,13 @@ function StudentManagement() {
               <tbody>
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={8}><p className="empty-state">No approved students found for selected filters.</p></td>
+                    <td colSpan={9}><p className="empty-state">No approved students found for selected filters.</p></td>
                   </tr>
                 ) : (
                   filteredStudents.map((user) => {
                     const profile = user?.student_profile;
                     const admissionStatus = profile?.admission_status || "not_submitted";
+                    const admissionNumber = profile?.admission_no || "-";
                     const className = profile?.class_id?.name || profile?.class_applying || "Not assigned";
                     const sectionName = profile?.section_id?.name || "-";
                     const rollNumber = profile?.roll_no || "-";
@@ -179,6 +181,7 @@ function StudentManagement() {
                           <p className="table-secondary">{user.email}</p>
                         </td>
                         <td>{user.mobile || "-"}</td>
+                        <td>{admissionNumber}</td>
                         <td>{rollNumber}</td>
                         <td>{className}</td>
                         <td>{sectionName}</td>

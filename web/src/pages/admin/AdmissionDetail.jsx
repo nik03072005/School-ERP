@@ -102,6 +102,7 @@ function AdmissionDetail() {
 
       <div className="detail-grid">
         <Block title="Student Information">
+          <DetailRow label="Admission Number" value={student.admission_no} />
           <DetailRow label="Full Name" value={`${user.first_name || ""} ${user.last_name || ""}`.trim()} />
           <DetailRow label="Mobile" value={user.mobile} />
           <DetailRow label="Gender" value={student.gender} />

@@ -8,15 +8,19 @@ import {
   CalendarCheck2,
   CalendarOff,
   ClipboardList,
+  DollarSign,
   GraduationCap,
   LayoutDashboard,
+  Layers,
   Megaphone,
   MessageSquare,
   NotebookPen,
   PlaySquare,
   Settings2,
   ShieldCheck,
+  Tag,
   Users,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "../components/NotificationBell";
@@ -34,6 +38,16 @@ const NAV_ITEMS = [
       { to: "/admin/school-setup/operations", label: "Academic Operations", icon: ClipboardList },
     ],
   },
+  // {
+  //   label: "Fee Management",
+  //   icon: DollarSign,
+  //   children: [
+  //     { to: "/admin/fees/heads", label: "Fee Heads", icon: Tag },
+  //     { to: "/admin/fees/structures", label: "Fee Structures", icon: Layers },
+  //     { to: "/admin/fees/assignments", label: "Assignments & Dues", icon: Users },
+  //     { to: "/admin/fees/collection", label: "Collection", icon: Wallet },
+  //   ],
+  // },
   { to: "/admin/attendance", label: "Attendance Ops", icon: CalendarCheck2 },
   { to: "/admin/attendance-audit", label: "Attendance Audit", icon: ShieldCheck },
   { to: "/admin/logbook", label: "Daily Logbook", icon: BookOpen },

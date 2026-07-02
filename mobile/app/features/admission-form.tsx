@@ -33,6 +33,8 @@ function Field({
   editable,
   multiline,
   keyboardType,
+  required,
+  hasError,
 }: {
   label: string;
   value?: string | number;
@@ -40,12 +42,17 @@ function Field({
   editable: boolean;
   multiline?: boolean;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
+  required?: boolean;
+  hasError?: boolean;
 }) {
   return (
     <View style={s.fieldWrap}>
-      <Text style={s.label}>{label}</Text>
+      <Text style={s.label}>
+        {label}
+        {required && <Text style={s.requiredStar}> *</Text>}
+      </Text>
       <TextInput
-        style={[s.input, multiline && s.inputMulti, !editable && s.inputDisabled]}
+        style={[s.input, multiline && s.inputMulti, !editable && s.inputDisabled, hasError && s.inputError]}
         value={value === undefined || value === null ? '' : String(value)}
         onChangeText={onChangeText}
         editable={editable}
@@ -53,6 +60,7 @@ function Field({
         keyboardType={keyboardType ?? 'default'}
         placeholderTextColor={Colors.placeholder}
       />
+      {hasError && <Text style={s.fieldErrorText}>This field is required.</Text>}
     </View>
   );
 }
@@ -96,6 +104,12 @@ function BoolField({
 const RELATIONSHIP_OPTIONS = ['mother', 'father', 'other'];
 const GENDER_OPTIONS = ['male', 'female', 'other'];
 
+const REQUIRED_FIELDS = new Set<keyof AdmissionFormData>([
+  'admission_no', 'gender', 'date_of_birth', 'class_applying',
+  'address', 'city',
+  'primary_guardian_name', 'primary_guardian_relationship', 'primary_guardian_phone',
+]);
+
 const normalizeText = (value?: string) => (value ?? '').trim();
 
 export default function AdmissionFormScreen() {
@@ -115,7 +129,9 @@ export default function AdmissionFormScreen() {
   const [studentDocId, setStudentDocId] = useState<string | null>(null);
   const [admissionStatus, setAdmissionStatus] = useState<'not_submitted' | 'pending' | 'approved' | 'rejected'>('not_submitted');
   const [targetStudent, setTargetStudent] = useState<{ first_name?: string; last_name?: string; email?: string; mobile?: string } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Set<keyof AdmissionFormData>>(new Set());
   const [form, setForm] = useState<AdmissionFormData>({
+    admission_no: '',
     gender: '',
     date_of_birth: '',
     class_applying: '',
@@ -158,6 +174,9 @@ export default function AdmissionFormScreen() {
 
   const set = <K extends keyof AdmissionFormData>(key: K, value: AdmissionFormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    if (fieldErrors.has(key)) {
+      setFieldErrors((prev) => { const next = new Set(prev); next.delete(key); return next; });
+    }
   };
 
   useEffect(() => {
@@ -170,6 +189,7 @@ export default function AdmissionFormScreen() {
       setStudentDocId(student?._id ?? null);
       setAdmissionStatus(student?.admission_status ?? 'not_submitted');
       setForm({
+        admission_no: student?.admission_no ?? '',
         gender: student?.gender ?? '',
         date_of_birth: student?.date_of_birth ?? '',
         class_applying: student?.class_applying ?? '',
@@ -233,6 +253,21 @@ export default function AdmissionFormScreen() {
 
   const saveAdmission = async () => {
     if (!isAdminEditor || !studentDocId) return;
+
+    // Validate required fields
+    const missing = new Set<keyof AdmissionFormData>();
+    for (const key of REQUIRED_FIELDS) {
+      const val = form[key];
+      if (val === undefined || val === null || (typeof val === 'string' && !val.trim())) {
+        missing.add(key);
+      }
+    }
+    if (missing.size > 0) {
+      setFieldErrors(missing);
+      Alert.alert('Required Fields Missing', 'Please fill in all fields marked with *.');
+      return;
+    }
+    setFieldErrors(new Set());
 
     setSaving(true);
     try {
@@ -301,19 +336,26 @@ export default function AdmissionFormScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <Section title="STUDENT INFORMATION">
+          <Field label="Admission Number" value={form.admission_no} editable={isAdminEditor} onChangeText={(v) => set('admission_no', v)}
+            required hasError={fieldErrors.has('admission_no')} />
           <Field label="Full Name" value={`${targetStudent?.first_name ?? ''} ${targetStudent?.last_name ?? ''}`} editable={false} />
           <Field label="Email" value={targetStudent?.email ?? ''} editable={false} />
           <Field label="Mobile" value={targetStudent?.mobile ?? ''} editable={false} />
-          <Field label="Date of Birth" value={form.date_of_birth} editable={isAdminEditor} onChangeText={(v) => set('date_of_birth', v)} />
-          <Field label="Class Applying For" value={form.class_applying} editable={isAdminEditor} onChangeText={(v) => set('class_applying', v)} />
+          <Field label="Date of Birth" value={form.date_of_birth} editable={isAdminEditor} onChangeText={(v) => set('date_of_birth', v)}
+            required hasError={fieldErrors.has('date_of_birth')} />
+          <Field label="Class Applying For" value={form.class_applying} editable={isAdminEditor} onChangeText={(v) => set('class_applying', v)}
+            required hasError={fieldErrors.has('class_applying')} />
           <Field label="Blood Group" value={form.blood_group} editable={isAdminEditor} onChangeText={(v) => set('blood_group', v)} />
           <Field label="Aadhar Number" value={form.aadhar_number} editable={isAdminEditor} onChangeText={(v) => set('aadhar_number', v)} keyboardType="numeric" />
-          <Field label="Address" value={form.address} editable={isAdminEditor} onChangeText={(v) => set('address', v)} multiline />
-          <Field label="City" value={form.city} editable={isAdminEditor} onChangeText={(v) => set('city', v)} />
+          <Field label="Address" value={form.address} editable={isAdminEditor} onChangeText={(v) => set('address', v)} multiline
+            required hasError={fieldErrors.has('address')} />
+          <Field label="City" value={form.city} editable={isAdminEditor} onChangeText={(v) => set('city', v)}
+            required hasError={fieldErrors.has('city')} />
           <Field label="State" value={form.state} editable={isAdminEditor} onChangeText={(v) => set('state', v)} />
           <Field label="Zip Code" value={form.zip_code} editable={isAdminEditor} onChangeText={(v) => set('zip_code', v)} keyboardType="numeric" />
           <Field label="Previous School" value={form.previous_school} editable={isAdminEditor} onChangeText={(v) => set('previous_school', v)} />
-          <Field label="Gender (male/female/other)" value={form.gender} editable={isAdminEditor} onChangeText={(v) => set('gender', normalizeText(v).toLowerCase())} />
+          <Field label="Gender (male/female/other)" value={form.gender} editable={isAdminEditor} onChangeText={(v) => set('gender', normalizeText(v).toLowerCase())}
+            required hasError={fieldErrors.has('gender')} />
           {isAdminEditor && !GENDER_OPTIONS.includes(normalizeText(form.gender).toLowerCase()) && normalizeText(form.gender) !== '' && (
             <Text style={s.warningText}>Use one of: male, female, other.</Text>
           )}
@@ -322,12 +364,15 @@ export default function AdmissionFormScreen() {
         </Section>
 
         <Section title="PRIMARY GUARDIAN">
-          <Field label="Name" value={form.primary_guardian_name} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_name', v)} />
-          <Field label="Relationship (mother/father/other)" value={form.primary_guardian_relationship} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_relationship', normalizeText(v).toLowerCase())} />
+          <Field label="Name" value={form.primary_guardian_name} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_name', v)}
+            required hasError={fieldErrors.has('primary_guardian_name')} />
+          <Field label="Relationship (mother/father/other)" value={form.primary_guardian_relationship} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_relationship', normalizeText(v).toLowerCase())}
+            required hasError={fieldErrors.has('primary_guardian_relationship')} />
           {isAdminEditor && !RELATIONSHIP_OPTIONS.includes(normalizeText(form.primary_guardian_relationship).toLowerCase()) && normalizeText(form.primary_guardian_relationship) !== '' && (
             <Text style={s.warningText}>Use one of: mother, father, other.</Text>
           )}
-          <Field label="Phone" value={form.primary_guardian_phone} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_phone', v)} keyboardType="phone-pad" />
+          <Field label="Phone" value={form.primary_guardian_phone} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_phone', v)} keyboardType="phone-pad"
+            required hasError={fieldErrors.has('primary_guardian_phone')} />
           <Field label="Email" value={form.primary_guardian_email} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_email', v)} keyboardType="email-address" />
           <Field label="Address" value={form.primary_guardian_address} editable={isAdminEditor} onChangeText={(v) => set('primary_guardian_address', v)} multiline />
         </Section>
@@ -455,6 +500,7 @@ const s = StyleSheet.create({
 
   fieldWrap: { marginBottom: 9 },
   label: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600', marginBottom: 5 },
+  requiredStar: { color: Colors.error, fontWeight: '700' },
   input: {
     backgroundColor: Colors.background,
     borderWidth: 1,
@@ -467,6 +513,8 @@ const s = StyleSheet.create({
   },
   inputDisabled: { backgroundColor: '#F5F7FB' },
   inputMulti: { minHeight: 72, textAlignVertical: 'top' },
+  inputError: { borderColor: Colors.error, backgroundColor: '#FFF5F5' },
+  fieldErrorText: { marginTop: 3, color: Colors.error, fontSize: 11, fontWeight: '600' },
 
   boolRow: { flexDirection: 'row', gap: 8 },
   boolOption: {

@@ -1,6 +1,7 @@
 import API from './api';
 
 export interface AdmissionFormData {
+  admission_no?: string;
   gender?: string;
   date_of_birth?: string;
   class_applying?: string;

@@ -8,6 +8,7 @@ import TeachingProfile from "../models/TeachingProfile.js";
 import NonTeachingProfile from "../models/NonTeachingProfile.js";
 
 const ADMISSION_FIELDS = [
+  "admission_no",
   "gender", "date_of_birth", "class_applying", "blood_group", "aadhar_number",
   "address", "city", "state", "zip_code", "previous_school",
   "transport_required", "pickup_drop_address",

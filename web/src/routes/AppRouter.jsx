@@ -28,6 +28,11 @@ import ParentNotesAdmin from "../pages/admin/ParentNotesAdmin";
 import ExamsAdmin from "../pages/admin/ExamsAdmin";
 import ProgressReportAdmin from "../pages/admin/ProgressReportAdmin";
 import LearningAdmin from "../pages/admin/LearningAdmin";
+import FeeHeadsAdmin from "../pages/admin/fees/FeeHeadsAdmin";
+import FeeStructuresAdmin from "../pages/admin/fees/FeeStructuresAdmin";
+import FeeAssignmentsAdmin from "../pages/admin/fees/FeeAssignmentsAdmin";
+import StudentFeeDetail from "../pages/admin/fees/StudentFeeDetail";
+import FeeCollectionAdmin from "../pages/admin/fees/FeeCollectionAdmin";
 
 // Teacher pages
 import TeacherDashboard from "../pages/teacher/TeacherDashboard";
@@ -47,6 +52,7 @@ import StudentLeave from "../pages/student/StudentLeave";
 import StudentResults from "../pages/student/StudentResults";
 import StudentQueries from "../pages/student/StudentQueries";
 import StudentBirthdays from "../pages/student/StudentBirthdays";
+import StudentFees from "../pages/student/StudentFees";
 
 // Shared pages
 import LeaveApply from "../pages/LeaveApply";
@@ -87,6 +93,14 @@ function AppRouter() {
             <Route index element={<Navigate to="class-section" replace />} />
             <Route path="class-section" element={<SchoolSetup view="class-section" />} />
             <Route path="operations" element={<SchoolSetup view="operations" />} />
+          </Route>
+          <Route path="fees">
+            <Route index element={<Navigate to="heads" replace />} />
+            <Route path="heads" element={<FeeHeadsAdmin />} />
+            <Route path="structures" element={<FeeStructuresAdmin />} />
+            <Route path="assignments" element={<FeeAssignmentsAdmin />} />
+            <Route path="collection" element={<FeeCollectionAdmin />} />
+            <Route path="students/:studentId" element={<StudentFeeDetail />} />
           </Route>
           <Route path="attendance" element={<AttendanceAdmin />} />
           <Route path="attendance-audit" element={<AttendanceAudit />} />
@@ -143,6 +157,7 @@ function AppRouter() {
           <Route path="notices" element={<StudentNotices />} />
           <Route path="leave" element={<StudentLeave />} />
           <Route path="results" element={<StudentResults />} />
+          <Route path="fees" element={<StudentFees />} />
           <Route path="queries" element={<StudentQueries />} />
           <Route path="birthdays" element={<StudentBirthdays />} />
         </Route>

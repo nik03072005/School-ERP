@@ -18,6 +18,7 @@ import parentNoteRoutes from "./src/routes/parentNoteRoutes.js";
 import examRoutes from "./src/routes/examRoutes.js";
 import progressReportRoutes from "./src/routes/progressReportRoutes.js";
 import learningRoutes from "./src/routes/learningRoutes.js";
+import feeRoutes from "./src/routes/feeRoutes.js";
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ const startServer = async () => {
   app.use("/api/exams", examRoutes);
   app.use("/api/progress-reports", progressReportRoutes);
   app.use("/api/learning", learningRoutes);
+  app.use("/api/fees", feeRoutes);
 
   app.listen(process.env.PORT, () =>
     console.log(`Server running on port ${process.env.PORT}`)

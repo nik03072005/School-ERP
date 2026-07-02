@@ -7,7 +7,14 @@ import { setupService } from "../../api/setupService";
 const RELATIONSHIP_OPTIONS = ["mother", "father", "other"];
 const GENDER_OPTIONS = ["male", "female", "other"];
 
+const REQUIRED_FIELDS = new Set([
+  "admission_no", "gender", "date_of_birth", "class_applying",
+  "class_id", "section_id", "address", "city",
+  "primary_guardian_name", "primary_guardian_relationship", "primary_guardian_phone",
+]);
+
 const EMPTY_FORM = {
+  admission_no: "",
   gender: "",
   date_of_birth: "",
   class_applying: "",
@@ -48,11 +55,29 @@ const EMPTY_FORM = {
   docs_other: "",
 };
 
+function Label({ text, fieldKey }) {
+  return (
+    <span className="mb-1 block text-sm font-medium text-slate-700">
+      {text}
+      {REQUIRED_FIELDS.has(fieldKey) && <span className="ml-0.5 text-rose-500">*</span>}
+    </span>
+  );
+}
+
+function inputCls(errors, key) {
+  return `w-full rounded-md border px-3 py-2 text-sm ${errors[key] ? "border-rose-500 bg-rose-50 ring-1 ring-rose-500" : "border-slate-300"}`;
+}
+
+function selectCls(errors, key) {
+  return `w-full rounded-md border bg-white px-3 py-2 text-sm ${errors[key] ? "border-rose-500 bg-rose-50" : "border-slate-300"}`;
+}
+
 function AdmissionEditor() {
   const { userId } = useParams();
   const [studentId, setStudentId] = useState("");
   const [studentName, setStudentName] = useState("");
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setFormState] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarUploadStatus, setAvatarUploadStatus] = useState("idle");
@@ -64,10 +89,9 @@ function AdmissionEditor() {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
 
-  const GENDER_OPTIONS = ["male", "female", "other"];
-  const RELATIONSHIP_OPTIONS = ["mother", "father", "other"];
   const setField = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setFormState((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => { const next = { ...prev }; delete next[key]; return next; });
   };
 
   useEffect(() => {
@@ -85,7 +109,7 @@ function AdmissionEditor() {
         setStudentId(student._id);
         setStudentName(`${student?.user_id?.first_name || ""} ${student?.user_id?.last_name || ""}`.trim());
         setAvatarUrl(student?.user_id?.avatar || "");
-        setForm((prev) => ({ ...prev, ...student }));
+        setFormState((prev) => ({ ...prev, ...student }));
         setClasses(classRes.classes || []);
         setSections(sectionRes.sections || []);
       } catch (err) {
@@ -112,10 +136,20 @@ function AdmissionEditor() {
       return;
     }
 
-    if (!form.class_id || !form.section_id) {
-      setError("Please select class and section before saving admission.");
+    // Validate required fields
+    const fieldErrors = {};
+    for (const key of REQUIRED_FIELDS) {
+      const val = form[key];
+      if (val === undefined || val === null || (typeof val === "string" && !val.trim())) {
+        fieldErrors[key] = true;
+      }
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      setError("Please fill in all required fields marked with *.");
       return;
     }
+    setErrors({});
 
     setSaving(true);
     setError("");
@@ -241,8 +275,13 @@ function AdmissionEditor() {
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Gender</span>
-              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.gender} onChange={(e) => setField("gender", e.target.value.toLowerCase().trim())} >
+              <Label text="Admission Number" fieldKey="admission_no" />
+              <input className={inputCls(errors, "admission_no")} value={form.admission_no || ""} onChange={(e) => setField("admission_no", e.target.value)} placeholder="e.g. ADM-2024-001" />
+              {errors.admission_no && <p className="mt-1 text-xs text-rose-600">Admission number is required.</p>}
+            </label>
+            <label>
+              <Label text="Gender" fieldKey="gender" />
+              <select className={selectCls(errors, "gender")} value={form.gender} onChange={(e) => setField("gender", e.target.value.toLowerCase().trim())}>
                 <option value="">Select gender</option>
                 {GENDER_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -250,15 +289,17 @@ function AdmissionEditor() {
                   </option>
                 ))}
               </select>
+              {errors.gender && <p className="mt-1 text-xs text-rose-600">Gender is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Date of Birth</span>
-              <input type="date" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.date_of_birth || ""} onChange={(e) => setField("date_of_birth", e.target.value)} />
+              <Label text="Date of Birth" fieldKey="date_of_birth" />
+              <input type="date" className={inputCls(errors, "date_of_birth")} value={form.date_of_birth || ""} onChange={(e) => setField("date_of_birth", e.target.value)} />
+              {errors.date_of_birth && <p className="mt-1 text-xs text-rose-600">Date of birth is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Class Applying</span>
+              <Label text="Class Applying" fieldKey="class_applying" />
               <select
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className={selectCls(errors, "class_applying")}
                 value={form.class_applying || ""}
                 onChange={(e) => setField("class_applying", e.target.value)}
               >
@@ -269,11 +310,12 @@ function AdmissionEditor() {
                   </option>
                 ))}
               </select>
+              {errors.class_applying && <p className="mt-1 text-xs text-rose-600">Class applying is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Assign Class</span>
+              <Label text="Assign Class" fieldKey="class_id" />
               <select
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className={selectCls(errors, "class_id")}
                 value={form.class_id || ""}
                 onChange={(e) => {
                   const nextClassId = e.target.value;
@@ -289,11 +331,12 @@ function AdmissionEditor() {
                   </option>
                 ))}
               </select>
+              {errors.class_id && <p className="mt-1 text-xs text-rose-600">Class assignment is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Assign Section</span>
+              <Label text="Assign Section" fieldKey="section_id" />
               <select
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className={selectCls(errors, "section_id")}
                 value={form.section_id || ""}
                 onChange={(e) => setField("section_id", e.target.value)}
                 disabled={!form.class_id}
@@ -305,38 +348,41 @@ function AdmissionEditor() {
                   </option>
                 ))}
               </select>
+              {errors.section_id && <p className="mt-1 text-xs text-rose-600">Section assignment is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Blood Group</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.blood_group || ""} onChange={(e) => setField("blood_group", e.target.value)} />
+              <Label text="Blood Group" fieldKey="blood_group" />
+              <input className={inputCls(errors, "blood_group")} value={form.blood_group || ""} onChange={(e) => setField("blood_group", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Aadhar Number</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.aadhar_number || ""} onChange={(e) => setField("aadhar_number", e.target.value)} />
+              <Label text="Aadhar Number" fieldKey="aadhar_number" />
+              <input className={inputCls(errors, "aadhar_number")} value={form.aadhar_number || ""} onChange={(e) => setField("aadhar_number", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Zip Code</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.zip_code || ""} onChange={(e) => setField("zip_code", e.target.value)} />
+              <Label text="Zip Code" fieldKey="zip_code" />
+              <input className={inputCls(errors, "zip_code")} value={form.zip_code || ""} onChange={(e) => setField("zip_code", e.target.value)} />
             </label>
           </div>
 
           <label className="mt-3 block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Address</span>
-            <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.address || ""} onChange={(e) => setField("address", e.target.value)} />
+            <Label text="Address" fieldKey="address" />
+            <textarea className={`w-full rounded-md border px-3 py-2 text-sm ${errors.address ? "border-rose-500 bg-rose-50 ring-1 ring-rose-500" : "border-slate-300"}`} rows={2} value={form.address || ""} onChange={(e) => setField("address", e.target.value)} />
+            {errors.address && <p className="mt-1 text-xs text-rose-600">Address is required.</p>}
           </label>
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">City</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.city || ""} onChange={(e) => setField("city", e.target.value)} />
+              <Label text="City" fieldKey="city" />
+              <input className={inputCls(errors, "city")} value={form.city || ""} onChange={(e) => setField("city", e.target.value)} />
+              {errors.city && <p className="mt-1 text-xs text-rose-600">City is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">State</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.state || ""} onChange={(e) => setField("state", e.target.value)} />
+              <Label text="State" fieldKey="state" />
+              <input className={inputCls(errors, "state")} value={form.state || ""} onChange={(e) => setField("state", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Previous School</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.previous_school || ""} onChange={(e) => setField("previous_school", e.target.value)} />
+              <Label text="Previous School" fieldKey="previous_school" />
+              <input className={inputCls(errors, "previous_school")} value={form.previous_school || ""} onChange={(e) => setField("previous_school", e.target.value)} />
             </label>
           </div>
 
@@ -347,46 +393,48 @@ function AdmissionEditor() {
           <h3 className="mb-4 text-base font-semibold text-slate-900">Guardian Details</h3>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Primary Guardian Name</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.primary_guardian_name || ""} onChange={(e) => setField("primary_guardian_name", e.target.value)} />
+              <Label text="Primary Guardian Name" fieldKey="primary_guardian_name" />
+              <input className={inputCls(errors, "primary_guardian_name")} value={form.primary_guardian_name || ""} onChange={(e) => setField("primary_guardian_name", e.target.value)} />
+              {errors.primary_guardian_name && <p className="mt-1 text-xs text-rose-600">Guardian name is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Relationship</span>
-              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              <Label text="Relationship" fieldKey="primary_guardian_relationship" />
+              <select className={selectCls(errors, "primary_guardian_relationship")}
                 value={form.primary_guardian_relationship || ""}
                 onChange={(e) => setField("primary_guardian_relationship", e.target.value.toLowerCase().trim())}>
-                {
-                  RELATIONSHIP_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
-                    </option>
-                  ))
-                }
+                <option value="">Select relationship</option>
+                {RELATIONSHIP_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </option>
+                ))}
               </select>
+              {errors.primary_guardian_relationship && <p className="mt-1 text-xs text-rose-600">Relationship is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Primary Guardian Phone</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.primary_guardian_phone || ""} onChange={(e) => setField("primary_guardian_phone", e.target.value)} />
+              <Label text="Primary Guardian Phone" fieldKey="primary_guardian_phone" />
+              <input className={inputCls(errors, "primary_guardian_phone")} value={form.primary_guardian_phone || ""} onChange={(e) => setField("primary_guardian_phone", e.target.value)} />
+              {errors.primary_guardian_phone && <p className="mt-1 text-xs text-rose-600">Phone number is required.</p>}
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Primary Guardian Email</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.primary_guardian_email || ""} onChange={(e) => setField("primary_guardian_email", e.target.value)} />
+              <Label text="Primary Guardian Email" fieldKey="primary_guardian_email" />
+              <input className={inputCls(errors, "primary_guardian_email")} value={form.primary_guardian_email || ""} onChange={(e) => setField("primary_guardian_email", e.target.value)} />
             </label>
           </div>
 
           <label className="mt-3 block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Primary Guardian Address</span>
+            <Label text="Primary Guardian Address" fieldKey="primary_guardian_address" />
             <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.primary_guardian_address || ""} onChange={(e) => setField("primary_guardian_address", e.target.value)} />
           </label>
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Secondary Guardian Name</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.secondary_guardian_name || ""} onChange={(e) => setField("secondary_guardian_name", e.target.value)} />
+              <Label text="Secondary Guardian Name" fieldKey="secondary_guardian_name" />
+              <input className={inputCls(errors, "secondary_guardian_name")} value={form.secondary_guardian_name || ""} onChange={(e) => setField("secondary_guardian_name", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Secondary Relationship</span>
-              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.secondary_guardian_relationship || ""} onChange={(e) => setField("secondary_guardian_relationship", e.target.value.toLowerCase().trim())} >
+              <Label text="Secondary Relationship" fieldKey="secondary_guardian_relationship" />
+              <select className={selectCls(errors, "secondary_guardian_relationship")} value={form.secondary_guardian_relationship || ""} onChange={(e) => setField("secondary_guardian_relationship", e.target.value.toLowerCase().trim())}>
                 <option value="">Select relationship</option>
                 {RELATIONSHIP_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -396,12 +444,12 @@ function AdmissionEditor() {
               </select>
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Secondary Guardian Phone</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.secondary_guardian_phone || ""} onChange={(e) => setField("secondary_guardian_phone", e.target.value)} />
+              <Label text="Secondary Guardian Phone" fieldKey="secondary_guardian_phone" />
+              <input className={inputCls(errors, "secondary_guardian_phone")} value={form.secondary_guardian_phone || ""} onChange={(e) => setField("secondary_guardian_phone", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Secondary Guardian Email</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.secondary_guardian_email || ""} onChange={(e) => setField("secondary_guardian_email", e.target.value)} />
+              <Label text="Secondary Guardian Email" fieldKey="secondary_guardian_email" />
+              <input className={inputCls(errors, "secondary_guardian_email")} value={form.secondary_guardian_email || ""} onChange={(e) => setField("secondary_guardian_email", e.target.value)} />
             </label>
           </div>
 
@@ -412,12 +460,12 @@ function AdmissionEditor() {
           <h3 className="mb-4 text-base font-semibold text-slate-900">Medical and Documents</h3>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Emergency Contact Name</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.emergency_contact_name || ""} onChange={(e) => setField("emergency_contact_name", e.target.value)} />
+              <Label text="Emergency Contact Name" fieldKey="emergency_contact_name" />
+              <input className={inputCls(errors, "emergency_contact_name")} value={form.emergency_contact_name || ""} onChange={(e) => setField("emergency_contact_name", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Emergency Contact Relationship</span>
-              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.emergency_contact_relationship || ""} onChange={(e) => setField("emergency_contact_relationship", e.target.value)} >
+              <Label text="Emergency Contact Relationship" fieldKey="emergency_contact_relationship" />
+              <select className={selectCls(errors, "emergency_contact_relationship")} value={form.emergency_contact_relationship || ""} onChange={(e) => setField("emergency_contact_relationship", e.target.value)}>
                 <option value="">Select relationship</option>
                 {RELATIONSHIP_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -427,39 +475,39 @@ function AdmissionEditor() {
               </select>
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Emergency Contact Phone</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.emergency_contact_phone || ""} onChange={(e) => setField("emergency_contact_phone", e.target.value)} />
+              <Label text="Emergency Contact Phone" fieldKey="emergency_contact_phone" />
+              <input className={inputCls(errors, "emergency_contact_phone")} value={form.emergency_contact_phone || ""} onChange={(e) => setField("emergency_contact_phone", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Physician Name</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.physician_name || ""} onChange={(e) => setField("physician_name", e.target.value)} />
+              <Label text="Physician Name" fieldKey="physician_name" />
+              <input className={inputCls(errors, "physician_name")} value={form.physician_name || ""} onChange={(e) => setField("physician_name", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Physician Phone</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.physician_phone || ""} onChange={(e) => setField("physician_phone", e.target.value)} />
+              <Label text="Physician Phone" fieldKey="physician_phone" />
+              <input className={inputCls(errors, "physician_phone")} value={form.physician_phone || ""} onChange={(e) => setField("physician_phone", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Insurance Provider</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.health_insurance_provider || ""} onChange={(e) => setField("health_insurance_provider", e.target.value)} />
+              <Label text="Insurance Provider" fieldKey="health_insurance_provider" />
+              <input className={inputCls(errors, "health_insurance_provider")} value={form.health_insurance_provider || ""} onChange={(e) => setField("health_insurance_provider", e.target.value)} />
             </label>
             <label>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Policy Number</span>
-              <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.policy_number || ""} onChange={(e) => setField("policy_number", e.target.value)} />
+              <Label text="Policy Number" fieldKey="policy_number" />
+              <input className={inputCls(errors, "policy_number")} value={form.policy_number || ""} onChange={(e) => setField("policy_number", e.target.value)} />
             </label>
           </div>
 
           <label className="mt-3 block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Medical Conditions</span>
+            <Label text="Medical Conditions" fieldKey="medical_conditions" />
             <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.medical_conditions || ""} onChange={(e) => setField("medical_conditions", e.target.value)} />
           </label>
 
           <label className="mt-3 block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Allergies</span>
+            <Label text="Allergies" fieldKey="allergies_list" />
             <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.allergies_list || ""} onChange={(e) => setField("allergies_list", e.target.value)} />
           </label>
 
           <label className="mt-3 block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Other Documents</span>
+            <Label text="Other Documents" fieldKey="docs_other" />
             <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.docs_other || ""} onChange={(e) => setField("docs_other", e.target.value)} />
           </label>
 
@@ -487,13 +535,18 @@ function AdmissionEditor() {
           </div>
         </article>
 
-        <button
-          type="submit"
-          className="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save Admission Form"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            className="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save Admission Form"}
+          </button>
+          {Object.keys(errors).length > 0 && (
+            <p className="text-sm text-rose-600">Fields marked with <span className="font-bold">*</span> are required.</p>
+          )}
+        </div>
       </form>
     </section>
   );
