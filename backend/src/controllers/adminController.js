@@ -426,6 +426,55 @@ export const createUser = async (req, res) => {
   }
 };
 
+// @desc    Update a user's basic account details
+// @route   PUT /api/admin/users/:id
+// @access  Admin
+export const updateUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { first_name, last_name, email, mobile, avatar, password } = req.body;
+
+    if (email && email.toLowerCase().trim() !== user.email) {
+      const existingUser = await User.findOne({ email: String(email).toLowerCase().trim() });
+      if (existingUser) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+      user.email = email.toLowerCase().trim();
+    }
+
+    if (first_name) user.first_name = first_name;
+    if (last_name) user.last_name = last_name;
+    if (mobile) user.mobile = mobile;
+    if (avatar !== undefined) user.avatar = avatar || null;
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters." });
+      }
+      user.password = password;
+    }
+
+    await user.save();
+
+    const updated = await User.findById(user._id)
+      .select("-password")
+      .populate("role_id", "name")
+      .populate("created_by", "first_name last_name email");
+
+    res.status(200).json({ message: "User updated successfully", user: updated });
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e) => e.message).join(", ");
+      return res.status(400).json({ message: messages });
+    }
+
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 // @desc    Get all pending users
 // @route   GET /api/admin/users/pending
 // @access  Admin

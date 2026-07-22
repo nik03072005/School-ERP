@@ -28,6 +28,14 @@ const INITIAL_FORM = {
   role: "student",
 };
 
+const INITIAL_EDIT_FORM = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  mobile: "",
+  password: "",
+};
+
 const INITIAL_FILTERS = {
   search: "",
   role: "",
@@ -83,6 +91,9 @@ function UserManagement() {
   const [sortDir, setSortDir] = useState("desc");
   const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalItems: 0 });
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState(INITIAL_EDIT_FORM);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const filterContentRef = useRef(null);
   const [filterContentHeight, setFilterContentHeight] = useState("0px");
@@ -290,13 +301,61 @@ function UserManagement() {
       if (type === "reject") await adminService.rejectUser(id);
       if (type === "activate") await adminService.activateUser(id);
       if (type === "deactivate") await adminService.deactivateUser(id);
+      if (type === "delete") await adminService.deleteUser(id);
 
-      setNotice(`User ${type}d successfully.`);
+      setNotice(type === "delete" ? "User deleted successfully." : `User ${type}d successfully.`);
       await loadData(true);
     } catch (err) {
       setError(err?.response?.data?.message || "Action failed.");
     } finally {
       setDialog(null);
+    }
+  };
+
+  const openEditModal = (user) => {
+    setEditingUser(user);
+    setEditForm({
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      email: user.email || "",
+      mobile: user.mobile || "",
+      password: "",
+    });
+  };
+
+  const handleUpdateUser = async (event) => {
+    event.preventDefault();
+
+    if (!editingUser) return;
+
+    if (!editForm.first_name || !editForm.last_name || !editForm.email) {
+      setError("First name, last name and email are required.");
+      return;
+    }
+
+    if (editForm.password && editForm.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+      await adminService.updateUser(editingUser._id, {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        email: editForm.email.trim().toLowerCase(),
+        mobile: editForm.mobile.trim() || undefined,
+        password: editForm.password || undefined,
+      });
+
+      setEditingUser(null);
+      setEditForm(INITIAL_EDIT_FORM);
+      setNotice("User updated successfully.");
+      await loadData(true);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Could not update user.");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -465,6 +524,57 @@ function UserManagement() {
                 <button type="button" className="btn btn-ghost" onClick={() => setShowCreateModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={creating}>
                   {creating ? "Creating..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
+      {editingUser ? (
+        <div className="modal-backdrop" onClick={() => setEditingUser(null)}>
+          <article className="modal-card modal-card-lg create-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Edit User</h3>
+              <button type="button" className="btn btn-ghost" onClick={() => setEditingUser(null)}>Close</button>
+            </div>
+            <form className="create-form" onSubmit={handleUpdateUser}>
+              <div className="form-grid">
+                <label>
+                  First Name
+                  <input value={editForm.first_name} onChange={(e) => setEditForm((p) => ({ ...p, first_name: e.target.value }))} />
+                </label>
+                <label>
+                  Last Name
+                  <input value={editForm.last_name} onChange={(e) => setEditForm((p) => ({ ...p, last_name: e.target.value }))} />
+                </label>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Mobile
+                  <input value={editForm.mobile} onChange={(e) => setEditForm((p) => ({ ...p, mobile: e.target.value }))} />
+                </label>
+                <label>
+                  New Password (optional)
+                  <input
+                    type="password"
+                    placeholder="Leave blank to keep current password"
+                    value={editForm.password}
+                    onChange={(e) => setEditForm((p) => ({ ...p, password: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setEditingUser(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingEdit}>
+                  {savingEdit ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -682,6 +792,13 @@ function UserManagement() {
 
                             {role === "student" ? getStudentFormAction(user) : null}
                             {hasStaffRole(role) ? getStaffFormAction(user) : null}
+
+                            <button type="button" className="btn btn-secondary" onClick={() => openEditModal(user)}>
+                              Edit
+                            </button>
+                            <button type="button" className="btn btn-danger" onClick={() => setDialog({ action: "delete", id: user._id })}>
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -717,9 +834,9 @@ function UserManagement() {
       <ConfirmDialog
         open={Boolean(dialog)}
         title={dialog ? `${dialog.action[0].toUpperCase()}${dialog.action.slice(1)} user` : ""}
-        message="Please confirm this admin action."
+        message={dialog?.action === "delete" ? "This will permanently delete the user and their profile. This cannot be undone." : "Please confirm this admin action."}
         confirmText={dialog ? dialog.action : "confirm"}
-        variant={dialog?.action === "reject" || dialog?.action === "deactivate" ? "danger" : "default"}
+        variant={["reject", "deactivate", "delete"].includes(dialog?.action) ? "danger" : "default"}
         onCancel={() => setDialog(null)}
         onConfirm={() => runUserAction(dialog.action, dialog.id)}
       />

@@ -2,7 +2,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "school_erp_token";
-const LAN_API_URL = "http://192.168.31.29:5000/api";
+const LAN_API_URL = "https://api.kidzgalaxy.org/api";
 
 const resolveApiBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;

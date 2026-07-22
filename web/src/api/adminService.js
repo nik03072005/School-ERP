@@ -41,6 +41,16 @@ export const adminService = {
     return response.data;
   },
 
+  updateUser: async (id, payload) => {
+    const response = await API.put(`/admin/users/${id}`, payload);
+    return response.data;
+  },
+
+  deleteUser: async (id) => {
+    const response = await API.delete(`/admin/users/${id}`);
+    return response.data;
+  },
+
   getPendingAdmissions: async (params) => {
     const response = await API.get("/admin/admissions/pending", { params });
     return response.data;

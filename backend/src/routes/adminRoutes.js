@@ -4,6 +4,7 @@ import {
   getAllUsers,
   getPendingUsers,
   getUserById,
+  updateUser,
   approveUser,
   rejectUser,
   deactivateUser,
@@ -31,6 +32,7 @@ router.post("/users", createUser);
 router.get("/users", getAllUsers);
 router.get("/users/pending", getPendingUsers);
 router.get("/users/:id", getUserById);
+router.put("/users/:id", updateUser);
 router.patch("/users/:id/approve", approveUser);
 router.patch("/users/:id/reject", rejectUser);
 router.patch("/users/:id/deactivate", deactivateUser);
