@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BookOpen, CheckCircle2, Loader2, Save } from "lucide-react";
 import { logbookService } from "../../api/logbookService";
 import { setupService } from "../../api/setupService";
+import { subjectService } from "../../api/subjectService";
 import MediaUpload from "../../components/MediaUpload";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -20,6 +21,7 @@ export default function TeacherLogbook() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
+  const [classSubjects, setClassSubjects] = useState([]);
   const [recentEntries, setRecentEntries] = useState([]);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -34,6 +36,17 @@ export default function TeacherLogbook() {
     );
     loadRecent();
   }, []);
+
+  useEffect(() => {
+    if (form.class_id) {
+      subjectService
+        .getSubjects({ class_id: form.class_id, is_active: true })
+        .then((res) => setClassSubjects(res.subjects || []))
+        .catch(() => setClassSubjects([]));
+    } else {
+      setClassSubjects([]);
+    }
+  }, [form.class_id]);
 
   const loadRecent = async () => {
     try {
@@ -133,15 +146,25 @@ export default function TeacherLogbook() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Subject</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Subject {classSubjects.length > 0 && <span className="text-cyan-600 font-semibold">(CBSE Master linked)</span>}
+                </label>
                 <input
                   type="text"
+                  list="logbook-subjects"
                   value={form.subject}
                   onChange={(e) => setField("subject", e.target.value)}
-                  placeholder="e.g. Mathematics"
+                  placeholder="Select or type subject..."
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300"
                   required
                 />
+                <datalist id="logbook-subjects">
+                  {classSubjects.map((s) => (
+                    <option key={s._id} value={s.name}>
+                      Code {s.code} - {s.name} ({s.split_type?.replace("_", "+")})
+                    </option>
+                  ))}
+                </datalist>
               </div>
 
               <div>

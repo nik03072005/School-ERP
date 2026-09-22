@@ -6,5 +6,7 @@ export const batchUpsertReports = (data) =>
   API.post("/progress-reports/batch", data).then((r) => r.data);
 export const getExamReport = (examId) =>
   API.get(`/progress-reports/exam/${examId}`).then((r) => r.data);
+export const getStudentCbseCard = (studentId, params) =>
+  API.get(`/progress-reports/student/${studentId}/cbse-card`, { params }).then((r) => r.data);
 export const publishReports = (examId) =>
   API.patch(`/progress-reports/exam/${examId}/publish`).then((r) => r.data);

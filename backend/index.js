@@ -19,6 +19,13 @@ import examRoutes from "./src/routes/examRoutes.js";
 import progressReportRoutes from "./src/routes/progressReportRoutes.js";
 import learningRoutes from "./src/routes/learningRoutes.js";
 import feeRoutes from "./src/routes/feeRoutes.js";
+import transferCertificateRoutes from "./src/routes/transferCertificateRoutes.js";
+import transportRoutes from "./src/routes/transportRoutes.js";
+import inventoryRoutes from "./src/routes/inventoryRoutes.js";
+import subjectRoutes from "./src/routes/subjectRoutes.js";
+import syllabusRoutes from "./src/routes/syllabusRoutes.js";
+import visitorGatePassRoutes from "./src/routes/visitorGatePassRoutes.js";
+import payrollRoutes from "./src/routes/payrollRoutes.js";
 
 dotenv.config();
 
@@ -66,6 +73,13 @@ const startServer = async () => {
   app.use("/api/progress-reports", progressReportRoutes);
   app.use("/api/learning", learningRoutes);
   app.use("/api/fees", feeRoutes);
+  app.use("/api/tc", transferCertificateRoutes);
+  app.use("/api/transport", transportRoutes);
+  app.use("/api/inventory", inventoryRoutes);
+  app.use("/api/subjects", subjectRoutes);
+  app.use("/api/syllabus", syllabusRoutes);
+  app.use("/api/campus-security", visitorGatePassRoutes);
+  app.use("/api/payroll", payrollRoutes);
 
   app.listen(process.env.PORT, () =>
     console.log(`Server running on port ${process.env.PORT}`)

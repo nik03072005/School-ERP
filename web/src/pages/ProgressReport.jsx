@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, GraduationCap } from "lucide-react";
+import { Award, ChevronDown, GraduationCap, Printer } from "lucide-react";
 import { getMyReports } from "../api/progressReportService";
+import CbseReportCardModal from "../components/reports/CbseReportCardModal";
 
 const GRADE_COLORS = {
   A: "bg-green-100 text-green-700",
@@ -19,12 +20,17 @@ const TYPE_LABELS = {
 
 export default function ProgressReport() {
   const [reports, setReports] = useState([]);
+  const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
+  const [cardModal, setCardModal] = useState({ isOpen: false, activeIndex: 0 });
 
   useEffect(() => {
     getMyReports()
-      .then(({ reports }) => setReports(reports))
+      .then((data) => {
+        setReports(data.reports || []);
+        setStudent(data.student || null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -79,7 +85,7 @@ export default function ProgressReport() {
                         {exam?.academic_year ? ` · ${exam.academic_year}` : ""}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-3">
+                    <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                       <div className="text-right">
                         <p className="text-xl font-bold text-slate-900">{report.percentage ?? "—"}%</p>
                         <p className="text-xs text-slate-400">
@@ -89,6 +95,19 @@ export default function ProgressReport() {
                       <span className={`rounded-xl px-3 py-1.5 text-sm font-bold ${GRADE_COLORS[report.overall_grade] || GRADE_COLORS["N/A"]}`}>
                         {report.overall_grade ?? "—"}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const idx = reports.findIndex((r) => r._id === report._id);
+                          setCardModal({ isOpen: true, activeIndex: Math.max(0, idx) });
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-2xs hover:bg-amber-100 transition active:scale-95"
+                        title="Open Printable CBSE Marksheet"
+                      >
+                        <Award size={14} className="text-amber-700" />
+                        <span className="hidden sm:inline">CBSE Marksheet</span>
+                      </button>
                       <ChevronDown
                         size={18}
                         className={`text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -134,17 +153,50 @@ export default function ProgressReport() {
                           </tr>
                         </tfoot>
                       </table>
-                      {report.remarks && (
-                        <p className="mt-3 rounded-xl bg-cyan-50 px-4 py-2 text-sm text-cyan-700">
-                          <span className="font-semibold">Remarks:</span> {report.remarks}
-                        </p>
-                      )}
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                        {report.remarks ? (
+                          <p className="rounded-xl bg-cyan-50 px-4 py-2 text-xs sm:text-sm text-cyan-700 flex-1">
+                            <span className="font-semibold">Remarks:</span> {report.remarks}
+                          </p>
+                        ) : (
+                          <div />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const idx = reports.findIndex((r) => r._id === report._id);
+                            setCardModal({ isOpen: true, activeIndex: Math.max(0, idx) });
+                          }}
+                          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-800 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:from-amber-600 hover:to-amber-700 transition active:scale-95"
+                        >
+                          <Printer size={14} />
+                          <span>Print Official CBSE Marksheet / HPC</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
+        )}
+
+        {/* ── Formal CBSE Printable Report Card Modal ── */}
+        {reports.length > 0 && (
+          <CbseReportCardModal
+            isOpen={cardModal.isOpen}
+            onClose={() => setCardModal({ isOpen: false, activeIndex: 0 })}
+            reports={reports.map((r) => ({
+              ...r,
+              student_id: r.student_id?._id ? r.student_id : student,
+            }))}
+            activeReportIndex={cardModal.activeIndex}
+            schoolBranding={{
+              schoolName: "Kidz Galaxy International Senior Secondary School",
+              affiliationNo: "2130892",
+              schoolCode: "71204",
+            }}
+          />
         )}
       </div>
     </div>

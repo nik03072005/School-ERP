@@ -8,6 +8,12 @@
     "start": "node index.js",
     "rollno:rebuild": "node src/scripts/rebuildStudentRollNumbers.js",
     "empcode:rebuild": "node src/scripts/rebuildEmployeeCodes.js",
+    "seed:demo": "node src/scripts/seedIndianDemoData.js",
+    "seed:transport": "node src/scripts/seedTransportDemoData.js",
+    "seed:inventory": "node src/scripts/seedInventoryDemoData.js",
+    "seed:security": "node src/scripts/seedGatePassDemoData.js",
+    "seed:payroll": "node src/scripts/seedPayrollDemoData.js",
+    "timetable:generate": "node src/scripts/generateTimetable.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

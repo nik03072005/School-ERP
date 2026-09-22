@@ -41,6 +41,39 @@ const staffSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    bank_ifsc: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+    pan_number: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+    uan_number: {
+      type: String,
+      trim: true,
+    },
+    pf_account_no: {
+      type: String,
+      trim: true,
+    },
+    esi_number: {
+      type: String,
+      trim: true,
+    },
+    salary_structure: {
+      da_amount: { type: Number, default: 0 },
+      hra_amount: { type: Number, default: 0 },
+      conveyance_allowance: { type: Number, default: 0 },
+      medical_allowance: { type: Number, default: 0 },
+      special_allowance: { type: Number, default: 0 },
+      epf_applicable: { type: Boolean, default: true },
+      esi_applicable: { type: Boolean, default: false },
+      pt_applicable: { type: Boolean, default: true },
+      tds_monthly: { type: Number, default: 0 },
+    },
     staff_type: {
       type: String,
       enum: ["teaching_staff", "non_teaching_staff"],

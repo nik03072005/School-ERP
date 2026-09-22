@@ -17,7 +17,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.schoolerp.mobile",
+      "package": "com.kidzgalaxyschool.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/icon.png",
@@ -52,7 +52,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8264ed4a-541e-4a8a-95d3-e6d6ab3ef8f3"
+        "projectId": "a9b617c1-bcfc-4252-b481-1b87628aff80"
       }
     },
     "owner": "visheshtripathi"

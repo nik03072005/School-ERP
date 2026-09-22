@@ -11,11 +11,11 @@ const classSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
-      max: 6,
+      max: 12,
     },
     capacity: {
       type: Number,
-      default: 40,
+      default: 60,
       min: 1,
     },
     is_active: {

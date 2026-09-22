@@ -33,6 +33,12 @@ const STAFF_FIELDS = [
   "basic_salary",
   "bank_account_no",
   "bank_name",
+  "bank_ifsc",
+  "pan_number",
+  "uan_number",
+  "pf_account_no",
+  "esi_number",
+  "salary_structure",
   "staff_type",
   "is_active",
 ];
@@ -178,7 +184,7 @@ const buildUserFilter = async (query, forceStatus) => {
   }
 
   if (is_active !== undefined && is_active !== "") {
-    filter.is_active = is_active === "true";
+    filter.is_active = is_active === "true" || is_active === true;
   }
 
   if (search) {
@@ -202,12 +208,27 @@ const buildUserFilter = async (query, forceStatus) => {
     }
   }
 
-  if (role) {
-    const roleDoc = await Role.findOne({ name: role }).select("_id");
-    if (!roleDoc) {
+  const roleParam = query.roles || query.role;
+  if (roleParam) {
+    let roleNames = [];
+    if (Array.isArray(roleParam)) {
+      roleNames = roleParam.flatMap((r) => String(r).split(","));
+    } else if (typeof roleParam === "string") {
+      roleNames = roleParam.split(",");
+    }
+    roleNames = roleNames.map((r) => r.trim()).filter(Boolean);
+    if (roleNames.includes("staff")) {
+      roleNames = roleNames.filter((r) => r !== "staff").concat(["teaching_staff", "non_teaching_staff"]);
+    }
+    const roleDocs = await Role.find({ name: { $in: roleNames } }).select("_id");
+    if (roleDocs.length === 0) {
       return { noResults: true, filter };
     }
-    filter.role_id = roleDoc._id;
+    if (roleDocs.length === 1) {
+      filter.role_id = roleDocs[0]._id;
+    } else {
+      filter.role_id = { $in: roleDocs.map((r) => r._id) };
+    }
   }
 
   return { noResults: false, filter };
@@ -294,7 +315,7 @@ const listUsersWithQuery = async (query, forceStatus = null) => {
   const sortField = USER_SORT_FIELDS[query.sort_by] || "createdAt";
   const sortDir = query.sort_dir === "asc" ? 1 : -1;
   const page = toPositiveInt(query.page, 1);
-  const limit = Math.min(toPositiveInt(query.limit, 25), 100);
+  const limit = Math.min(toPositiveInt(query.limit, 25), 500);
   const skip = (page - 1) * limit;
 
   if (noResults) {
@@ -325,7 +346,7 @@ const listUsersWithQuery = async (query, forceStatus = null) => {
 
   return {
     users,
-    count: users.length,
+    count: totalItems,
     pagination: {
       page,
       limit,

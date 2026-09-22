@@ -6,9 +6,9 @@ import { recomputeStudentFeeTotals } from "../utils/feeCalculations.js";
 
 const STUDENT_POPULATE = {
   path: "student_id",
-  select: "admission_no roll_no class_id section_id user_id",
+  select: "admission_no roll_no class_id section_id user_id father_name mother_name primary_guardian_name primary_guardian_relationship admission_date",
   populate: [
-    { path: "user_id", select: "first_name last_name email" },
+    { path: "user_id", select: "first_name last_name email mobile" },
     { path: "class_id", select: "name grade_level" },
     { path: "section_id", select: "name" },
   ],

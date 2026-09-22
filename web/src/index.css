@@ -1,9 +1,15 @@
 @import "tailwindcss";
 
 @layer base {
+	html {
+		scroll-behavior: smooth;
+	}
+
 	body {
 		@apply m-0 min-h-screen bg-slate-100 text-slate-800 antialiased;
 		font-family: "Segoe UI", "Inter", sans-serif;
+		@apply m-0 min-h-screen bg-slate-50 text-slate-800 antialiased;
+		font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
 	}
 
 	#root {
@@ -674,4 +680,70 @@
 		}
 	}
 
+	/* ── Modern Pitch-Ready Visual Design Utilities ── */
+	.glass-card {
+		@apply bg-white/85 backdrop-blur-md border border-white/60 shadow-xl;
+	}
+
+	.glass-nav {
+		@apply sticky top-0 z-50 bg-white/85 backdrop-blur-lg border-b border-slate-200/80;
+	}
+
+	.card-hover-lift {
+		@apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+	}
+
+	.badge-pill {
+		@apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase;
+	}
+
+	.badge-cyan {
+		@apply bg-cyan-50 border border-cyan-200 text-cyan-700;
+	}
+
+	.badge-indigo {
+		@apply bg-indigo-50 border border-indigo-200 text-indigo-700;
+	}
+
+	.badge-emerald {
+		@apply bg-emerald-50 border border-emerald-200 text-emerald-700;
+	}
+
+	.badge-amber {
+		@apply bg-amber-50 border border-amber-200 text-amber-700;
+	}
+
+	.gradient-text-brand {
+		@apply bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-700 bg-clip-text text-transparent;
+	}
+
+	.gradient-hero-bg {
+		background: radial-gradient(circle at 15% 20%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+		            radial-gradient(circle at 85% 60%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+		            radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+		            #f8fafc;
+	}
+
+	.admin-custom-scrollbar {
+		scrollbar-width: thin;
+		scrollbar-color: #cbd5e1 transparent;
+	}
+
+	.admin-custom-scrollbar::-webkit-scrollbar {
+		width: 6px;
+		height: 6px;
+	}
+
+	.admin-custom-scrollbar::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.admin-custom-scrollbar::-webkit-scrollbar-thumb {
+		background: #cbd5e1;
+		border-radius: 9999px;
+	}
+
+	.admin-custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: #94a3b8;
+	}
 }

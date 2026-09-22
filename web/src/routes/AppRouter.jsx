@@ -33,19 +33,36 @@ import FeeStructuresAdmin from "../pages/admin/fees/FeeStructuresAdmin";
 import FeeAssignmentsAdmin from "../pages/admin/fees/FeeAssignmentsAdmin";
 import StudentFeeDetail from "../pages/admin/fees/StudentFeeDetail";
 import FeeCollectionAdmin from "../pages/admin/fees/FeeCollectionAdmin";
+import TCGenerator from "../pages/admin/TCGenerator";
+import TransportAdmin from "../pages/admin/TransportAdmin";
+import InventoryDashboard from "../pages/admin/inventory/InventoryDashboard";
+import InventoryItems from "../pages/admin/inventory/InventoryItems";
+import StudentDistribution from "../pages/admin/inventory/StudentDistribution";
+import DistributionRegister from "../pages/admin/inventory/DistributionRegister";
+import VendorPurchases from "../pages/admin/inventory/VendorPurchases";
+import KitManagement from "../pages/admin/inventory/KitManagement";
+import SubjectMasterAdmin from "../pages/admin/SubjectMasterAdmin";
+import SyllabusTrackerAdmin from "../pages/admin/SyllabusTrackerAdmin";
+import PayrollDashboard from "../pages/admin/payroll/PayrollDashboard";
+import PayrollBatchDetail from "../pages/admin/payroll/PayrollBatchDetail";
+import CampusSecurityAdmin from "../pages/admin/CampusSecurityAdmin";
 
 // Teacher pages
 import TeacherDashboard from "../pages/teacher/TeacherDashboard";
 import TeacherAttendance from "../pages/teacher/TeacherAttendance";
 import TeacherLogbook from "../pages/teacher/TeacherLogbook";
+import TeacherSyllabus from "../pages/teacher/TeacherSyllabus";
 import TeacherMarksEntry from "../pages/teacher/TeacherMarksEntry";
 import TeacherLearning from "../pages/teacher/TeacherLearning";
 import TeacherNotices from "../pages/teacher/TeacherNotices";
 import TeacherSettings from "../pages/teacher/TeacherSettings";
+import TeacherPayslips from "../pages/teacher/TeacherPayslips";
+import TeacherGatePassAdmin from "../pages/teacher/TeacherGatePassAdmin";
 
 // Student pages
 import StudentDashboard from "../pages/student/StudentDashboard";
 import StudentAttendance from "../pages/student/StudentAttendance";
+import StudentSyllabus from "../pages/student/StudentSyllabus";
 import StudentLogbook from "../pages/student/StudentLogbook";
 import StudentNotices from "../pages/student/StudentNotices";
 import StudentLeave from "../pages/student/StudentLeave";
@@ -53,6 +70,9 @@ import StudentResults from "../pages/student/StudentResults";
 import StudentQueries from "../pages/student/StudentQueries";
 import StudentBirthdays from "../pages/student/StudentBirthdays";
 import StudentFees from "../pages/student/StudentFees";
+import StudentTransport from "../pages/student/StudentTransport";
+import StudentStore from "../pages/student/StudentStore";
+import StudentGatePass from "../pages/student/StudentGatePass";
 
 // Shared pages
 import LeaveApply from "../pages/LeaveApply";
@@ -112,6 +132,21 @@ function AppRouter() {
           <Route path="progress-reports" element={<ProgressReportAdmin />} />
           <Route path="learning" element={<LearningAdmin />} />
           <Route path="birthdays" element={<StudentBirthdays />} />
+          <Route path="tc-generator" element={<TCGenerator />} />
+          <Route path="transport" element={<TransportAdmin />} />
+          <Route path="inventory">
+            <Route index element={<InventoryDashboard />} />
+            <Route path="items" element={<InventoryItems />} />
+            <Route path="distribution" element={<StudentDistribution />} />
+            <Route path="register" element={<DistributionRegister />} />
+            <Route path="purchases" element={<VendorPurchases />} />
+            <Route path="kits" element={<KitManagement />} />
+          </Route>
+          <Route path="subjects" element={<SubjectMasterAdmin />} />
+          <Route path="syllabus" element={<SyllabusTrackerAdmin />} />
+          <Route path="payroll" element={<PayrollDashboard />} />
+          <Route path="payroll/:batchId" element={<PayrollBatchDetail />} />
+          <Route path="campus-security" element={<CampusSecurityAdmin />} />
           <Route path="admissions/:studentId" element={<AdmissionDetail />} />
           <Route path="admissions/edit/:userId" element={<AdmissionEditor />} />
           <Route path="staff/edit/:userId" element={<StaffEditor />} />
@@ -131,9 +166,12 @@ function AppRouter() {
           <Route index element={<TeacherDashboard />} />
           <Route path="attendance" element={<TeacherAttendance />} />
           <Route path="logbook" element={<TeacherLogbook />} />
+          <Route path="syllabus" element={<TeacherSyllabus />} />
           <Route path="marks" element={<TeacherMarksEntry />} />
           <Route path="learning" element={<TeacherLearning />} />
+          <Route path="gate-passes" element={<TeacherGatePassAdmin />} />
           <Route path="leave" element={<LeaveApply />} />
+          <Route path="payslips" element={<TeacherPayslips />} />
           <Route path="notices" element={<TeacherNotices />} />
           <Route path="parent-notes" element={<ParentNotesAdmin />} />
           <Route path="birthdays" element={<StudentBirthdays />} />
@@ -153,11 +191,15 @@ function AppRouter() {
         >
           <Route index element={<StudentDashboard />} />
           <Route path="attendance" element={<StudentAttendance />} />
+          <Route path="syllabus" element={<StudentSyllabus />} />
           <Route path="logbook" element={<StudentLogbook />} />
           <Route path="notices" element={<StudentNotices />} />
           <Route path="leave" element={<StudentLeave />} />
           <Route path="results" element={<StudentResults />} />
           <Route path="fees" element={<StudentFees />} />
+          <Route path="store" element={<StudentStore />} />
+          <Route path="transport" element={<StudentTransport />} />
+          <Route path="gate-passes" element={<StudentGatePass />} />
           <Route path="queries" element={<StudentQueries />} />
           <Route path="birthdays" element={<StudentBirthdays />} />
         </Route>

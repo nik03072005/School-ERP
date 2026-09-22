@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Send } from "lucide-react";
+import { Users, Send, CheckCircle2, AlertCircle, ArrowRight, Filter, Search } from "lucide-react";
 import { feeService } from "../../../api/feeService";
 import { setupService } from "../../../api/setupService";
 
 const STATUS_COLORS = {
-  pending: "bg-slate-200 text-slate-700",
-  partial: "bg-amber-100 text-amber-700",
-  paid: "bg-emerald-100 text-emerald-700",
-  overdue: "bg-rose-100 text-rose-700",
+  pending: "bg-slate-100 text-slate-700 border border-slate-200",
+  partial: "bg-amber-50 text-amber-800 border border-amber-200",
+  paid: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  overdue: "bg-rose-50 text-rose-700 border border-rose-200",
 };
 
 const currency = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -69,7 +69,7 @@ export default function FeeAssignmentsAdmin() {
     setAssignResult("");
     try {
       const { message } = await feeService.assignFeeStructure({ fee_structure_id: assignStructureId });
-      setAssignResult(message);
+      setAssignResult(message || "Fee structure assigned successfully.");
       loadDues();
     } catch (err) {
       setAssignResult(err?.response?.data?.message || "Failed to assign fee structure");
@@ -80,18 +80,38 @@ export default function FeeAssignmentsAdmin() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Fee Assignments &amp; Dues</h1>
-        <p className="text-sm text-slate-500">Assign fee structures to a class/section and track student dues</p>
+      {/* ── Page Header ── */}
+      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-600">
+            <Users size={15} />
+            Student Fee Accounts
+          </div>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+            Fee Assignments &amp; Dues
+          </h1>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Batch-enroll students into class fee structures and track collection balances in real-time.
+          </p>
+        </div>
       </div>
 
-      <div className="panel">
-        <p className="mb-3 text-sm font-semibold text-slate-700">Assign a Fee Structure</p>
+      {/* ── Batch Assign Action Card ── */}
+      <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
+        <div className="flex items-center gap-2 mb-3">
+          <Send size={15} className="text-cyan-600" />
+          <h3 className="font-extrabold text-slate-900 text-sm">Batch Assign Fee Structure</h3>
+        </div>
+
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-64 flex-1">
-            <label>Fee Structure</label>
-            <select value={assignStructureId} onChange={(e) => setAssignStructureId(e.target.value)}>
-              <option value="">Select a fee structure</option>
+            <label className="text-xs font-bold text-slate-700">Target Fee Structure</label>
+            <select
+              value={assignStructureId}
+              onChange={(e) => setAssignStructureId(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:bg-white"
+            >
+              <option value="">Select a structure to assign</option>
               {structures.map((s) => (
                 <option key={s._id} value={s._id}>
                   {s.class_id?.name} {s.section_id ? `· ${s.section_id.name}` : "· All Sections"} ({s.academic_year}) —{" "}
@@ -100,108 +120,161 @@ export default function FeeAssignmentsAdmin() {
               ))}
             </select>
           </div>
+
           <button
+            type="button"
             onClick={handleAssign}
             disabled={!assignStructureId || assigning}
-            className="flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 transition disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-cyan-600/30 hover:from-cyan-500 hover:to-cyan-600 disabled:opacity-50"
           >
-            <Send size={15} /> {assigning ? "Assigning…" : "Assign to Class/Section"}
+            <Send size={14} />
+            <span>{assigning ? "Assigning Students..." : "Assign to Class/Section"}</span>
           </button>
         </div>
-        <p className="mt-2 text-xs text-slate-400">
-          Assigns to every approved student in the structure's class (and section, if set). Students already assigned
-          for that academic year are skipped.
+
+        <p className="mt-2 text-[11px] text-slate-400">
+          This assigns the schedule to every approved student in the matching class. Existing assignments for that academic year are preserved.
         </p>
-        {assignResult && <div className="alert success mt-3">{assignResult}</div>}
+
+        {assignResult && (
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+            <CheckCircle2 size={14} className="text-emerald-600" />
+            <span>{assignResult}</span>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="w-auto">
-          <option value="">All Classes</option>
-          {classes.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select value={filterSection} onChange={(e) => setFilterSection(e.target.value)} className="w-auto" disabled={!filterClass}>
-          <option value="">All Sections</option>
-          {sections.map((s) => (
-            <option key={s._id} value={s._id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto">
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="partial">Partial</option>
-          <option value="paid">Paid</option>
-          <option value="overdue">Overdue</option>
-        </select>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <input type="checkbox" className="mt-0 w-auto" checked={overdueOnly} onChange={(e) => setOverdueOnly(e.target.checked)} />
-          Overdue only
-        </label>
+      {/* ── Filters Toolbar ── */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="w-44">
+            <select
+              value={filterClass}
+              onChange={(e) => setFilterClass(e.target.value)}
+              className="mt-0 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-800 focus:bg-white"
+            >
+              <option value="">All Academic Classes</option>
+              {classes.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-40">
+            <select
+              value={filterSection}
+              onChange={(e) => setFilterSection(e.target.value)}
+              disabled={!filterClass}
+              className="mt-0 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-800 focus:bg-white disabled:opacity-50"
+            >
+              <option value="">All Sections</option>
+              {sections.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-36">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="mt-0 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-800 focus:bg-white"
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pl-1">
+            <input
+              type="checkbox"
+              checked={overdueOnly}
+              onChange={(e) => setOverdueOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-rose-600"
+            />
+            <span className="text-rose-600">Only Overdue Dues</span>
+          </label>
+        </div>
       </div>
 
-      {loading ? (
-        <p className="text-slate-400 text-sm">Loading…</p>
-      ) : dues.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 py-16 text-center">
-          <Users size={32} className="mx-auto mb-3 text-slate-300" />
-          <p className="text-slate-500">No fee assignments match these filters</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="admin-table w-full text-sm">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Class</th>
-                <th>Net Payable</th>
-                <th>Paid</th>
-                <th>Due</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {dues.map((sf) => {
-                const student = sf.student_id;
-                const name = `${student?.user_id?.first_name || ""} ${student?.user_id?.last_name || ""}`.trim();
-                return (
-                  <tr key={sf._id}>
-                    <td>
-                      <p className="font-semibold text-slate-800">{name || "—"}</p>
-                      <p className="text-xs text-slate-400">{student?.admission_no}</p>
-                    </td>
-                    <td>
-                      {student?.class_id?.name} {student?.section_id ? `· ${student.section_id.name}` : ""}
-                    </td>
-                    <td>{currency(sf.net_payable)}</td>
-                    <td>{currency(sf.total_paid)}</td>
-                    <td className="font-semibold text-slate-800">{currency(sf.total_due)}</td>
-                    <td>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLORS[sf.status] || STATUS_COLORS.pending}`}>
-                        {sf.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => navigate(`/admin/fees/students/${student?._id}`)}
-                        className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* ── Dues Ledger Table ── */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs">
+        {loading ? (
+          <div className="py-20 text-center">
+            <div className="h-7 w-7 animate-spin rounded-full border-3 border-cyan-600 border-t-transparent mx-auto" />
+            <p className="mt-2 text-xs font-bold text-slate-500">Loading student dues ledger...</p>
+          </div>
+        ) : dues.length === 0 ? (
+          <div className="py-16 text-center text-slate-400">
+            <Users size={32} className="mx-auto mb-2 text-slate-300" />
+            <p className="text-xs font-medium">No fee assignments match the active filters.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="px-5 py-3">Student</th>
+                  <th className="px-4 py-3">Class & Section</th>
+                  <th className="px-4 py-3">Net Payable</th>
+                  <th className="px-4 py-3">Total Paid</th>
+                  <th className="px-4 py-3">Balance Due</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {dues.map((sf) => {
+                  const student = sf.student_id;
+                  const name = `${student?.user_id?.first_name || ""} ${student?.user_id?.last_name || ""}`.trim();
+                  return (
+                    <tr key={sf._id} className="hover:bg-slate-50/70 transition">
+                      <td className="px-5 py-3.5">
+                        <p className="font-bold text-slate-900">{name || "—"}</p>
+                        <p className="text-[11px] text-slate-400 font-mono">{student?.admission_no || "—"}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                          {student?.class_id?.name} {student?.section_id ? `· ${student.section_id.name}` : ""}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-700">{currency(sf.net_payable)}</td>
+                      <td className="px-4 py-3.5 text-emerald-700 font-semibold">{currency(sf.total_paid)}</td>
+                      <td className="px-4 py-3.5 font-bold text-slate-900">{currency(sf.total_due)}</td>
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            STATUS_COLORS[sf.status] || STATUS_COLORS.pending
+                          }`}
+                        >
+                          {sf.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/fees/students/${student?._id}`)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-700"
+                        >
+                          <span>Ledger</span>
+                          <ArrowRight size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

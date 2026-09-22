@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { BookOpen, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Trash2, Calendar, User, FileText, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { logbookService } from "../../api/logbookService";
 import { setupService } from "../../api/setupService";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 const STATUS_COLORS = {
-  published: "bg-green-100 text-green-700",
-  draft: "bg-amber-100 text-amber-700",
+  published: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  draft: "bg-amber-50 text-amber-700 border border-amber-200",
 };
 
 export default function LogbookAdmin() {
@@ -57,12 +57,12 @@ export default function LogbookAdmin() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm("Delete this logbook entry?")) return;
+    if (!confirm("Are you sure you want to delete this logbook entry?")) return;
     try {
       await logbookService.deleteEntry(id);
       setEntries((prev) => prev.filter((e) => e._id !== id));
     } catch {
-      alert("Failed to delete entry.");
+      alert("Failed to delete logbook entry.");
     }
   };
 
@@ -73,167 +73,226 @@ export default function LogbookAdmin() {
     : sections;
 
   return (
-    <section className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div className="space-y-6">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Daily Logbook</h2>
-          <p className="mt-1 text-sm text-slate-500">View classwork and homework entries posted by teachers.</p>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-600">
+            <BookOpen size={15} />
+            Academic Daily Journal
+          </div>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">Daily Logbook</h1>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Review teacher curriculum delivery, daily topics covered, assignments, and lesson attachments.
+          </p>
         </div>
-        <span className="rounded-xl bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">
-          {total} {total === 1 ? "entry" : "entries"}
-        </span>
-      </div>
 
-      {/* Filters */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-          <input
-            type="date"
-            value={filters.date}
-            onChange={(e) => set("date", e.target.value)}
-            className="col-span-2 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 md:col-span-1"
-          />
-          <select
-            value={filters.class_id}
-            onChange={(e) => { set("class_id", e.target.value); set("section_id", ""); }}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300"
-          >
-            <option value="">All Classes</option>
-            {classes.map((c) => (
-              <option key={c._id} value={c._id}>{c.name || `Grade ${c.grade}`}</option>
-            ))}
-          </select>
-          <select
-            value={filters.section_id}
-            onChange={(e) => set("section_id", e.target.value)}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300"
-          >
-            <option value="">All Sections</option>
-            {filteredSections.map((s) => (
-              <option key={s._id} value={s._id}>{s.name}</option>
-            ))}
-          </select>
-          <select
-            value={filters.status}
-            onChange={(e) => set("status", e.target.value)}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300"
-          >
-            <option value="">All Status</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
+        <div className="flex items-center gap-3">
+          <span className="rounded-2xl bg-cyan-50 border border-cyan-200 px-3.5 py-1.5 text-xs font-bold text-cyan-800">
+            {total} {total === 1 ? "Entry" : "Entries"} Logged
+          </span>
         </div>
       </div>
 
-      {/* Error */}
+      {/* ── Filters Toolbar ── */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="text-[11px] font-bold uppercase text-slate-500">Log Date</label>
+            <input
+              type="date"
+              value={filters.date}
+              onChange={(e) => set("date", e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-800 focus:bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold uppercase text-slate-500">Class Standard</label>
+            <select
+              value={filters.class_id}
+              onChange={(e) => {
+                set("class_id", e.target.value);
+                set("section_id", "");
+              }}
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-800 focus:bg-white"
+            >
+              <option value="">All Classes</option>
+              {classes.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name || `Grade ${c.grade}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold uppercase text-slate-500">Section</label>
+            <select
+              value={filters.section_id}
+              onChange={(e) => set("section_id", e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-800 focus:bg-white"
+            >
+              <option value="">All Sections</option>
+              {filteredSections.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold uppercase text-slate-500">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => set("status", e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-800 focus:bg-white"
+            >
+              <option value="">All Statuses</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft Only</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800">
+          {error}
+        </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* ── Log Entries Stream ── */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs">
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading…</div>
+          <div className="py-20 text-center">
+            <div className="h-7 w-7 animate-spin rounded-full border-3 border-cyan-600 border-t-transparent mx-auto" />
+            <p className="mt-2 text-xs font-bold text-slate-500">Loading daily logbook entries...</p>
+          </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-400">
-            <BookOpen size={32} className="opacity-30" />
-            <p className="text-sm">No logbook entries found for the selected filters.</p>
+          <div className="py-16 text-center text-slate-400">
+            <BookOpen size={32} className="mx-auto mb-2 text-slate-300" />
+            <p className="text-xs font-medium">No logbook entries found for the selected criteria.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {entries.map((entry) => (
-              <div key={entry._id}>
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1 grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <div>
-                      <p className="text-[11px] text-slate-400 uppercase tracking-wide">Date</p>
-                      <p className="text-sm font-medium text-slate-800">
-                        {new Date(entry.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                      </p>
+            {entries.map((entry) => {
+              const isExp = expanded === entry._id;
+              const teacherName = entry.teacher_id
+                ? `${entry.teacher_id.first_name} ${entry.teacher_id.last_name}`.trim()
+                : "Unassigned Teacher";
+
+              return (
+                <div key={entry._id} className="transition hover:bg-slate-50/50">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 font-bold text-cyan-800 text-xs">
+                        {entry.subject?.[0] || "B"}
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-bold text-slate-900">{entry.subject}</h3>
+                          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                            {entry.class_id?.name || "—"} &bull; {entry.section_id?.name || "—"}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              STATUS_COLORS[entry.status] || STATUS_COLORS.draft
+                            }`}
+                          >
+                            {entry.status}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Educator: <strong>{teacherName}</strong> &bull; Date:{" "}
+                          {new Date(entry.date).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[11px] text-slate-400 uppercase tracking-wide">Class / Section</p>
-                      <p className="text-sm font-medium text-slate-800">
-                        {entry.class_id?.name || "—"} / {entry.section_id?.name || "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-slate-400 uppercase tracking-wide">Subject</p>
-                      <p className="text-sm font-medium text-slate-800">{entry.subject}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-slate-400 uppercase tracking-wide">Teacher</p>
-                      <p className="text-sm text-slate-600">
-                        {entry.teacher_id ? `${entry.teacher_id.first_name} ${entry.teacher_id.last_name}` : "—"}
-                      </p>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(isExp ? null : entry._id)}
+                        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <span>{isExp ? "Hide Content" : "View Details"}</span>
+                        {isExp ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(entry._id)}
+                        className="rounded-xl p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-600 transition"
+                        title="Delete Entry"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
 
-                  <span className={`shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold ${STATUS_COLORS[entry.status]}`}>
-                    {entry.status}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => setExpanded((p) => (p === entry._id ? null : entry._id))}
-                    className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                    title="Expand"
-                  >
-                    {expanded === entry._id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(entry._id)}
-                    className="shrink-0 rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500"
-                    title="Delete"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {isExp && (
+                    <div className="mx-5 mb-5 grid gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-5 md:grid-cols-2">
+                      <ContentCard title="Classwork & Topics Covered" content={entry.classwork} />
+                      <ContentCard title="Assigned Homework & Practice" content={entry.homework} />
+                    </div>
+                  )}
                 </div>
-
-                {/* Expanded content */}
-                {expanded === entry._id && (
-                  <div className="mx-4 mb-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-2">
-                    <ContentBlock label="Classwork" content={entry.classwork} />
-                    <ContentBlock label="Homework" content={entry.homework} />
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
-function ContentBlock({ label, content }) {
+function ContentCard({ title, content }) {
   if (!content?.text && !content?.media?.length) {
     return (
-      <div>
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="text-sm text-slate-400 italic">Not added</p>
+      <div className="rounded-xl border border-slate-200/80 bg-white p-4">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+          {title}
+        </span>
+        <p className="text-xs text-slate-400 italic">No notes or entries logged.</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      {content.text && <p className="text-sm text-slate-700 whitespace-pre-wrap">{content.text}</p>}
+    <div className="rounded-xl border border-slate-200/80 bg-white p-4">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+        {title}
+      </span>
+      {content.text && (
+        <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">{content.text}</p>
+      )}
+
       {content.media?.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-slate-100">
           {content.media.map((m, i) =>
             m.type === "image" ? (
-              <a key={i} href={m.url} target="_blank" rel="noreferrer">
-                <img src={m.url} alt={m.filename || "media"} className="h-20 w-20 rounded-lg object-cover border border-slate-200" />
+              <a key={i} href={m.url} target="_blank" rel="noreferrer" className="group block">
+                <img
+                  src={m.url}
+                  alt={m.filename || "attachment"}
+                  className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-200 group-hover:scale-105 transition"
+                />
               </a>
             ) : (
-              <a key={i} href={m.url} target="_blank" rel="noreferrer"
-                className="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-xs text-slate-600">
-                Video
+              <a
+                key={i}
+                href={m.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-16 w-16 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Video Clip
               </a>
             )
           )}

@@ -1,5 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import {
+  AlertCircle,
+  ArrowLeft,
+  BookOpen,
+  Check,
+  CheckCircle2,
+  FileCheck,
+  GraduationCap,
+  HeartPulse,
+  Save,
+  ShieldAlert,
+  Upload,
+  User,
+  Users,
+} from "lucide-react";
 import { adminService } from "../../api/adminService";
 import { uploadAvatarToR2 } from "../../api/r2Upload";
 import { setupService } from "../../api/setupService";
@@ -8,9 +23,17 @@ const RELATIONSHIP_OPTIONS = ["mother", "father", "other"];
 const GENDER_OPTIONS = ["male", "female", "other"];
 
 const REQUIRED_FIELDS = new Set([
-  "admission_no", "gender", "date_of_birth", "class_applying",
-  "class_id", "section_id", "address", "city",
-  "primary_guardian_name", "primary_guardian_relationship", "primary_guardian_phone",
+  "admission_no",
+  "gender",
+  "date_of_birth",
+  "class_applying",
+  "class_id",
+  "section_id",
+  "address",
+  "city",
+  "primary_guardian_name",
+  "primary_guardian_relationship",
+  "primary_guardian_phone",
 ]);
 
 const EMPTY_FORM = {
@@ -55,21 +78,21 @@ const EMPTY_FORM = {
   docs_other: "",
 };
 
-function Label({ text, fieldKey }) {
+function FieldLabel({ text, fieldKey }) {
   return (
-    <span className="mb-1 block text-sm font-medium text-slate-700">
+    <span className="text-xs font-bold text-slate-700">
       {text}
-      {REQUIRED_FIELDS.has(fieldKey) && <span className="ml-0.5 text-rose-500">*</span>}
+      {REQUIRED_FIELDS.has(fieldKey) && <span className="ml-1 text-rose-500">*</span>}
     </span>
   );
 }
 
-function inputCls(errors, key) {
-  return `w-full rounded-md border px-3 py-2 text-sm ${errors[key] ? "border-rose-500 bg-rose-50 ring-1 ring-rose-500" : "border-slate-300"}`;
-}
-
-function selectCls(errors, key) {
-  return `w-full rounded-md border bg-white px-3 py-2 text-sm ${errors[key] ? "border-rose-500 bg-rose-50" : "border-slate-300"}`;
+function fieldInputClass(errors, key) {
+  return `mt-1 w-full rounded-xl border bg-white px-3 py-2 text-xs text-slate-800 transition focus:outline-hidden ${
+    errors[key]
+      ? "border-rose-400 bg-rose-50/50 ring-2 ring-rose-200"
+      : "border-slate-200 hover:border-slate-300 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+  }`;
 }
 
 function AdmissionEditor() {
@@ -91,7 +114,13 @@ function AdmissionEditor() {
 
   const setField = (key, value) => {
     setFormState((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) setErrors((prev) => { const next = { ...prev }; delete next[key]; return next; });
+    if (errors[key]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
   };
 
   useEffect(() => {
@@ -146,7 +175,7 @@ function AdmissionEditor() {
     }
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
-      setError("Please fill in all required fields marked with *.");
+      setError("Please fill in all required fields marked with an asterisk (*).");
       return;
     }
     setErrors({});
@@ -157,7 +186,6 @@ function AdmissionEditor() {
 
     try {
       const nextAvatar = avatarUrl;
-
       await adminService.upsertStudentAdmission(studentId, {
         ...form,
         avatar: nextAvatar || undefined,
@@ -169,34 +197,13 @@ function AdmissionEditor() {
       setAvatarFile(null);
       setAvatarUploadStatus("idle");
       setAvatarUploadError("");
-      setMessage("Admission form saved and approved.");
+      setMessage("Admission application updated and approved successfully!");
     } catch (err) {
       setError(err?.response?.data?.message || "Could not save admission form.");
     } finally {
       setSaving(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-sm text-slate-600">Loading admission form...</p>
-      </div>
-    );
-  }
-
-  if (error && !studentId) {
-    return (
-      <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
-        <p className="text-sm font-medium text-rose-700">{error}</p>
-      </div>
-    );
-  }
-
-  const relationshipWarning = form.primary_guardian_relationship && !RELATIONSHIP_OPTIONS.includes(form.primary_guardian_relationship);
-  const genderWarning = form.gender && !GENDER_OPTIONS.includes(form.gender);
-  const selectedClassId = String(form.class_id || "");
-  const filteredSections = sections.filter((section) => String(section.class_id?._id || section.class_id || "") === selectedClassId);
 
   const handleAvatarSelect = async (event) => {
     const file = event.target.files?.[0] || null;
@@ -219,338 +226,577 @@ function AdmissionEditor() {
     }
   };
 
-  return (
-    <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Edit Admission Form</h2>
-          <p className="mt-1 text-sm text-slate-600">{studentName || "Student"}</p>
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-600 border-t-transparent mx-auto" />
+          <p className="mt-3 text-xs font-bold text-slate-500">Loading student admission form...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error && !studentId) {
+    return (
+      <div className="rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-xs">
+        <ShieldAlert size={36} className="mx-auto text-rose-500 mb-2" />
+        <p className="text-sm font-bold text-slate-800">{error}</p>
         <Link
-          className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           to="/admin/users"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
         >
-          Back
+          <ArrowLeft size={14} /> Back to User Directory
         </Link>
       </div>
+    );
+  }
 
-      {message ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>
-      ) : null}
-      {error ? (
-        <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
-      ) : null}
+  const selectedClassId = String(form.class_id || "");
+  const filteredSections = sections.filter(
+    (section) => String(section.class_id?._id || section.class_id || "") === selectedClassId
+  );
 
-      <form className="space-y-6" onSubmit={save}>
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Student Information</h3>
+  return (
+    <div className="space-y-6">
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-600">
+            <GraduationCap size={15} />
+            Student Admission Record
+          </div>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+            {studentName || "Edit Admission Application"}
+          </h1>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Configure student details, class-section assignment, parent guardian info, and verification documents.
+          </p>
+        </div>
 
-          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Avatar</p>
-            <div className="flex flex-wrap items-center gap-3">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Student avatar" className="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow" />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-lg font-semibold text-slate-600">
-                  {studentName ? studentName[0]?.toUpperCase() : "S"}
-                </div>
-              )}
-              <div className="min-w-55 flex-1">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Upload / Replace Avatar</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarSelect}
-                  className="block w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  {avatarFile ? `Selected: ${avatarFile.name}` : "Current avatar is shown above."}
-                </p>
-                {avatarUploadStatus === "uploading" ? <p className="mt-1 text-xs text-blue-600">Uploading avatar...</p> : null}
-                {avatarUploadStatus === "uploaded" ? <p className="mt-1 text-xs text-emerald-600">Avatar uploaded successfully.</p> : null}
-                {avatarUploadStatus === "failed" ? <p className="mt-1 text-xs text-rose-600">{avatarUploadError || "Avatar upload failed."}</p> : null}
-              </div>
-            </div>
+        <div className="flex items-center gap-2.5">
+          <Link
+            to="/admin/users"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+          >
+            <ArrowLeft size={13} />
+            <span>Cancel</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-700 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-cyan-600/30 hover:from-cyan-500 hover:to-cyan-600 disabled:opacity-50"
+          >
+            <Save size={14} />
+            <span>{saving ? "Saving Changes..." : "Save & Approve Form"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Alerts ── */}
+      {message && (
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800 shadow-2xs">
+          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+          <span>{message}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-800 shadow-2xs">
+          <AlertCircle size={16} className="text-rose-600 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form onSubmit={save} className="space-y-6">
+        {/* ── 1. Student Identity & Avatar Card ── */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 text-xs font-extrabold uppercase tracking-wide text-slate-700">
+            <User size={16} className="text-cyan-600" />
+            <span>1. Identity & Student Photo</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <label>
-              <Label text="Admission Number" fieldKey="admission_no" />
-              <input className={inputCls(errors, "admission_no")} value={form.admission_no || ""} onChange={(e) => setField("admission_no", e.target.value)} placeholder="e.g. ADM-2024-001" />
-              {errors.admission_no && <p className="mt-1 text-xs text-rose-600">Admission number is required.</p>}
-            </label>
-            <label>
-              <Label text="Gender" fieldKey="gender" />
-              <select className={selectCls(errors, "gender")} value={form.gender} onChange={(e) => setField("gender", e.target.value.toLowerCase().trim())}>
-                <option value="">Select gender</option>
-                {GENDER_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option.charAt(0).toUpperCase() + option.slice(1)}
-                  </option>
-                ))}
-              </select>
-              {errors.gender && <p className="mt-1 text-xs text-rose-600">Gender is required.</p>}
-            </label>
-            <label>
-              <Label text="Date of Birth" fieldKey="date_of_birth" />
-              <input type="date" className={inputCls(errors, "date_of_birth")} value={form.date_of_birth || ""} onChange={(e) => setField("date_of_birth", e.target.value)} />
-              {errors.date_of_birth && <p className="mt-1 text-xs text-rose-600">Date of birth is required.</p>}
-            </label>
-            <label>
-              <Label text="Class Applying" fieldKey="class_applying" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-20 w-20 rounded-2xl object-cover ring-2 ring-cyan-200 shadow-sm"
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-xl font-bold text-white shadow-sm">
+                  {studentName?.[0] || "S"}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-1">
+              <label className="text-xs font-bold text-slate-700">Upload or Replace Avatar</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarSelect}
+                className="block w-full max-w-sm rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-white"
+              />
+              {avatarUploadStatus === "uploading" && (
+                <p className="text-[11px] text-cyan-600 font-medium">Uploading avatar to cloud...</p>
+              )}
+              {avatarUploadStatus === "uploaded" && (
+                <p className="text-[11px] text-emerald-600 font-medium">Avatar updated successfully.</p>
+              )}
+              {avatarUploadStatus === "failed" && (
+                <p className="text-[11px] text-rose-600 font-medium">{avatarUploadError || "Upload failed."}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2. Academic Placement & Demographic Information ── */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 text-xs font-extrabold uppercase tracking-wide text-slate-700">
+            <GraduationCap size={16} className="text-cyan-600" />
+            <span>2. Academic Placement & Demographics</span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <FieldLabel text="Admission Number" fieldKey="admission_no" />
+              <input
+                value={form.admission_no || ""}
+                onChange={(e) => setField("admission_no", e.target.value)}
+                placeholder="e.g. ADM-2026-001"
+                className={fieldInputClass(errors, "admission_no")}
+              />
+            </div>
+
+            <div>
+              <FieldLabel text="Gender" fieldKey="gender" />
               <select
-                className={selectCls(errors, "class_applying")}
-                value={form.class_applying || ""}
-                onChange={(e) => setField("class_applying", e.target.value)}
+                value={form.gender || ""}
+                onChange={(e) => setField("gender", e.target.value.toLowerCase().trim())}
+                className={fieldInputClass(errors, "gender")}
               >
-                <option value="">Select class</option>
-                {classes.map((item) => (
-                  <option key={item._id} value={item.name}>
-                    {item.name}
+                <option value="">Select Gender</option>
+                {GENDER_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
                   </option>
                 ))}
               </select>
-              {errors.class_applying && <p className="mt-1 text-xs text-rose-600">Class applying is required.</p>}
-            </label>
-            <label>
-              <Label text="Assign Class" fieldKey="class_id" />
+            </div>
+
+            <div>
+              <FieldLabel text="Date of Birth" fieldKey="date_of_birth" />
+              <input
+                type="date"
+                value={form.date_of_birth ? form.date_of_birth.slice(0, 10) : ""}
+                onChange={(e) => setField("date_of_birth", e.target.value)}
+                className={fieldInputClass(errors, "date_of_birth")}
+              />
+            </div>
+
+            <div>
+              <FieldLabel text="Assign Class" fieldKey="class_id" />
               <select
-                className={selectCls(errors, "class_id")}
                 value={form.class_id || ""}
                 onChange={(e) => {
                   const nextClassId = e.target.value;
                   setField("class_id", nextClassId);
-                  setField("class_applying", classes.find((item) => String(item._id) === String(nextClassId))?.name || "");
+                  setField(
+                    "class_applying",
+                    classes.find((item) => String(item._id) === String(nextClassId))?.name || ""
+                  );
                   setField("section_id", "");
                 }}
+                className={fieldInputClass(errors, "class_id")}
               >
-                <option value="">Select class</option>
-                {classes.map((item) => (
-                  <option key={item._id} value={item._id}>
-                    {item.name}
+                <option value="">Select Class</option>
+                {classes.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name} (Grade {c.grade_level})
                   </option>
                 ))}
               </select>
-              {errors.class_id && <p className="mt-1 text-xs text-rose-600">Class assignment is required.</p>}
-            </label>
-            <label>
-              <Label text="Assign Section" fieldKey="section_id" />
+            </div>
+
+            <div>
+              <FieldLabel text="Assign Section" fieldKey="section_id" />
               <select
-                className={selectCls(errors, "section_id")}
                 value={form.section_id || ""}
                 onChange={(e) => setField("section_id", e.target.value)}
                 disabled={!form.class_id}
+                className={fieldInputClass(errors, "section_id")}
               >
-                <option value="">Select section</option>
-                {filteredSections.map((section) => (
-                  <option key={section._id} value={section._id}>
-                    {section.name}
+                <option value="">Select Section</option>
+                {filteredSections.map((s) => (
+                  <option key={s._id} value={s._id}>
+                    {s.name}
                   </option>
                 ))}
               </select>
-              {errors.section_id && <p className="mt-1 text-xs text-rose-600">Section assignment is required.</p>}
-            </label>
-            <label>
-              <Label text="Blood Group" fieldKey="blood_group" />
-              <input className={inputCls(errors, "blood_group")} value={form.blood_group || ""} onChange={(e) => setField("blood_group", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Aadhar Number" fieldKey="aadhar_number" />
-              <input className={inputCls(errors, "aadhar_number")} value={form.aadhar_number || ""} onChange={(e) => setField("aadhar_number", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Zip Code" fieldKey="zip_code" />
-              <input className={inputCls(errors, "zip_code")} value={form.zip_code || ""} onChange={(e) => setField("zip_code", e.target.value)} />
-            </label>
+            </div>
+
+            <div>
+              <FieldLabel text="Class Applying For" fieldKey="class_applying" />
+              <input
+                value={form.class_applying || ""}
+                onChange={(e) => setField("class_applying", e.target.value)}
+                placeholder="e.g. Grade 1"
+                className={fieldInputClass(errors, "class_applying")}
+              />
+            </div>
+
+            <div>
+              <FieldLabel text="Blood Group" fieldKey="blood_group" />
+              <input
+                value={form.blood_group || ""}
+                onChange={(e) => setField("blood_group", e.target.value)}
+                placeholder="e.g. O+, A+, B+"
+                className={fieldInputClass(errors, "blood_group")}
+              />
+            </div>
+
+            <div>
+              <FieldLabel text="Aadhaar UID Number" fieldKey="aadhar_number" />
+              <input
+                value={form.aadhar_number || ""}
+                onChange={(e) => setField("aadhar_number", e.target.value)}
+                placeholder="12 digit Aadhaar"
+                className={fieldInputClass(errors, "aadhar_number")}
+              />
+            </div>
+
+            <div>
+              <FieldLabel text="Previous School Attended" fieldKey="previous_school" />
+              <input
+                value={form.previous_school || ""}
+                onChange={(e) => setField("previous_school", e.target.value)}
+                placeholder="Previous Institution name"
+                className={fieldInputClass(errors, "previous_school")}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── 3. Residential Address & Transport ── */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 text-xs font-extrabold uppercase tracking-wide text-slate-700">
+            <BookOpen size={16} className="text-cyan-600" />
+            <span>3. Residential Address & Transport</span>
           </div>
 
-          <label className="mt-3 block">
-            <Label text="Address" fieldKey="address" />
-            <textarea className={`w-full rounded-md border px-3 py-2 text-sm ${errors.address ? "border-rose-500 bg-rose-50 ring-1 ring-rose-500" : "border-slate-300"}`} rows={2} value={form.address || ""} onChange={(e) => setField("address", e.target.value)} />
-            {errors.address && <p className="mt-1 text-xs text-rose-600">Address is required.</p>}
-          </label>
+          <div className="space-y-3">
+            <div>
+              <FieldLabel text="Permanent / Residential Address" fieldKey="address" />
+              <textarea
+                rows={2}
+                value={form.address || ""}
+                onChange={(e) => setField("address", e.target.value)}
+                placeholder="Full street address..."
+                className={fieldInputClass(errors, "address")}
+              />
+            </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <label>
-              <Label text="City" fieldKey="city" />
-              <input className={inputCls(errors, "city")} value={form.city || ""} onChange={(e) => setField("city", e.target.value)} />
-              {errors.city && <p className="mt-1 text-xs text-rose-600">City is required.</p>}
-            </label>
-            <label>
-              <Label text="State" fieldKey="state" />
-              <input className={inputCls(errors, "state")} value={form.state || ""} onChange={(e) => setField("state", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Previous School" fieldKey="previous_school" />
-              <input className={inputCls(errors, "previous_school")} value={form.previous_school || ""} onChange={(e) => setField("previous_school", e.target.value)} />
-            </label>
-          </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <FieldLabel text="City" fieldKey="city" />
+                <input
+                  value={form.city || ""}
+                  onChange={(e) => setField("city", e.target.value)}
+                  className={fieldInputClass(errors, "city")}
+                />
+              </div>
 
-          {genderWarning ? <p className="mt-2 text-sm text-rose-600">Use: male, female, or other.</p> : null}
-        </article>
+              <div>
+                <FieldLabel text="State" fieldKey="state" />
+                <input
+                  value={form.state || ""}
+                  onChange={(e) => setField("state", e.target.value)}
+                  className={fieldInputClass(errors, "state")}
+                />
+              </div>
 
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Guardian Details</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <label>
-              <Label text="Primary Guardian Name" fieldKey="primary_guardian_name" />
-              <input className={inputCls(errors, "primary_guardian_name")} value={form.primary_guardian_name || ""} onChange={(e) => setField("primary_guardian_name", e.target.value)} />
-              {errors.primary_guardian_name && <p className="mt-1 text-xs text-rose-600">Guardian name is required.</p>}
-            </label>
-            <label>
-              <Label text="Relationship" fieldKey="primary_guardian_relationship" />
-              <select className={selectCls(errors, "primary_guardian_relationship")}
-                value={form.primary_guardian_relationship || ""}
-                onChange={(e) => setField("primary_guardian_relationship", e.target.value.toLowerCase().trim())}>
-                <option value="">Select relationship</option>
-                {RELATIONSHIP_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option.charAt(0).toUpperCase() + option.slice(1)}
-                  </option>
-                ))}
-              </select>
-              {errors.primary_guardian_relationship && <p className="mt-1 text-xs text-rose-600">Relationship is required.</p>}
-            </label>
-            <label>
-              <Label text="Primary Guardian Phone" fieldKey="primary_guardian_phone" />
-              <input className={inputCls(errors, "primary_guardian_phone")} value={form.primary_guardian_phone || ""} onChange={(e) => setField("primary_guardian_phone", e.target.value)} />
-              {errors.primary_guardian_phone
-                ? <p className="mt-1 text-xs text-rose-600">Phone number is required.</p>
-                : <p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><span>📲</span> WhatsApp notifications (attendance, notices, fees) will be sent to this number.</p>}
-            </label>
-            <label>
-              <Label text="Primary Guardian Email" fieldKey="primary_guardian_email" />
-              <input className={inputCls(errors, "primary_guardian_email")} value={form.primary_guardian_email || ""} onChange={(e) => setField("primary_guardian_email", e.target.value)} />
-            </label>
-          </div>
+              <div>
+                <FieldLabel text="ZIP / Postal Code" fieldKey="zip_code" />
+                <input
+                  value={form.zip_code || ""}
+                  onChange={(e) => setField("zip_code", e.target.value)}
+                  className={fieldInputClass(errors, "zip_code")}
+                />
+              </div>
+            </div>
 
-          <label className="mt-3 block">
-            <Label text="Primary Guardian Address" fieldKey="primary_guardian_address" />
-            <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.primary_guardian_address || ""} onChange={(e) => setField("primary_guardian_address", e.target.value)} />
-          </label>
-
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <label>
-              <Label text="Secondary Guardian Name" fieldKey="secondary_guardian_name" />
-              <input className={inputCls(errors, "secondary_guardian_name")} value={form.secondary_guardian_name || ""} onChange={(e) => setField("secondary_guardian_name", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Secondary Relationship" fieldKey="secondary_guardian_relationship" />
-              <select className={selectCls(errors, "secondary_guardian_relationship")} value={form.secondary_guardian_relationship || ""} onChange={(e) => setField("secondary_guardian_relationship", e.target.value.toLowerCase().trim())}>
-                <option value="">Select relationship</option>
-                {RELATIONSHIP_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option.charAt(0).toUpperCase() + option.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <Label text="Secondary Guardian Phone" fieldKey="secondary_guardian_phone" />
-              <input className={inputCls(errors, "secondary_guardian_phone")} value={form.secondary_guardian_phone || ""} onChange={(e) => setField("secondary_guardian_phone", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Secondary Guardian Email" fieldKey="secondary_guardian_email" />
-              <input className={inputCls(errors, "secondary_guardian_email")} value={form.secondary_guardian_email || ""} onChange={(e) => setField("secondary_guardian_email", e.target.value)} />
-            </label>
-          </div>
-
-          {relationshipWarning ? <p className="mt-2 text-sm text-rose-600">Primary relationship: mother, father, or other.</p> : null}
-        </article>
-
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Medical and Documents</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <label>
-              <Label text="Emergency Contact Name" fieldKey="emergency_contact_name" />
-              <input className={inputCls(errors, "emergency_contact_name")} value={form.emergency_contact_name || ""} onChange={(e) => setField("emergency_contact_name", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Emergency Contact Relationship" fieldKey="emergency_contact_relationship" />
-              <select className={selectCls(errors, "emergency_contact_relationship")} value={form.emergency_contact_relationship || ""} onChange={(e) => setField("emergency_contact_relationship", e.target.value)}>
-                <option value="">Select relationship</option>
-                {RELATIONSHIP_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option.charAt(0).toUpperCase() + option.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <Label text="Emergency Contact Phone" fieldKey="emergency_contact_phone" />
-              <input className={inputCls(errors, "emergency_contact_phone")} value={form.emergency_contact_phone || ""} onChange={(e) => setField("emergency_contact_phone", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Physician Name" fieldKey="physician_name" />
-              <input className={inputCls(errors, "physician_name")} value={form.physician_name || ""} onChange={(e) => setField("physician_name", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Physician Phone" fieldKey="physician_phone" />
-              <input className={inputCls(errors, "physician_phone")} value={form.physician_phone || ""} onChange={(e) => setField("physician_phone", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Insurance Provider" fieldKey="health_insurance_provider" />
-              <input className={inputCls(errors, "health_insurance_provider")} value={form.health_insurance_provider || ""} onChange={(e) => setField("health_insurance_provider", e.target.value)} />
-            </label>
-            <label>
-              <Label text="Policy Number" fieldKey="policy_number" />
-              <input className={inputCls(errors, "policy_number")} value={form.policy_number || ""} onChange={(e) => setField("policy_number", e.target.value)} />
-            </label>
-          </div>
-
-          <label className="mt-3 block">
-            <Label text="Medical Conditions" fieldKey="medical_conditions" />
-            <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.medical_conditions || ""} onChange={(e) => setField("medical_conditions", e.target.value)} />
-          </label>
-
-          <label className="mt-3 block">
-            <Label text="Allergies" fieldKey="allergies_list" />
-            <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.allergies_list || ""} onChange={(e) => setField("allergies_list", e.target.value)} />
-          </label>
-
-          <label className="mt-3 block">
-            <Label text="Other Documents" fieldKey="docs_other" />
-            <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows={2} value={form.docs_other || ""} onChange={(e) => setField("docs_other", e.target.value)} />
-          </label>
-
-          <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
-            {[
-              ["Transport Required", "transport_required"],
-              ["Has Allergies", "has_allergies"],
-              ["Has Medical Conditions", "has_medical_conditions"],
-              ["Birth Certificate", "docs_birth_certificate"],
-              ["Vaccination Card", "docs_vaccination_card"],
-              ["Aadhar Card", "docs_aadhar_card"],
-              ["Address Proof", "docs_address_proof"],
-              ["Photograph", "docs_photograph"],
-            ].map(([label, key]) => (
-              <label key={key} className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                <span className="font-medium text-slate-700">{label}</span>
+            <div className="pt-2 border-t border-slate-100">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={Boolean(form[key])}
-                  onChange={(e) => setField(key, e.target.checked)}
-                  className="h-4 w-4"
+                  checked={Boolean(form.transport_required)}
+                  onChange={(e) => setField("transport_required", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                 />
+                <span className="text-xs font-bold text-slate-700">Requires School Bus / Transport Service</span>
               </label>
-            ))}
-          </div>
-        </article>
 
-        <div className="flex items-center gap-3">
+              {form.transport_required && (
+                <div className="mt-3">
+                  <FieldLabel text="Pickup / Drop Point" fieldKey="pickup_drop_address" />
+                  <input
+                    value={form.pickup_drop_address || ""}
+                    onChange={(e) => setField("pickup_drop_address", e.target.value)}
+                    placeholder="Specific bus stop or landmark..."
+                    className={fieldInputClass(errors, "pickup_drop_address")}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── 4. Parent / Guardian Details ── */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 text-xs font-extrabold uppercase tracking-wide text-slate-700">
+            <Users size={16} className="text-cyan-600" />
+            <span>4. Guardian & Family Contacts</span>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-cyan-700">Primary Guardian</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <FieldLabel text="Full Name" fieldKey="primary_guardian_name" />
+                <input
+                  value={form.primary_guardian_name || ""}
+                  onChange={(e) => setField("primary_guardian_name", e.target.value)}
+                  className={fieldInputClass(errors, "primary_guardian_name")}
+                />
+              </div>
+
+              <div>
+                <FieldLabel text="Relationship" fieldKey="primary_guardian_relationship" />
+                <select
+                  value={form.primary_guardian_relationship || ""}
+                  onChange={(e) => setField("primary_guardian_relationship", e.target.value.toLowerCase().trim())}
+                  className={fieldInputClass(errors, "primary_guardian_relationship")}
+                >
+                  <option value="">Select</option>
+                  {RELATIONSHIP_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel text="Phone Number (WhatsApp)" fieldKey="primary_guardian_phone" />
+                <input
+                  value={form.primary_guardian_phone || ""}
+                  onChange={(e) => setField("primary_guardian_phone", e.target.value)}
+                  className={fieldInputClass(errors, "primary_guardian_phone")}
+                />
+              </div>
+
+              <div>
+                <FieldLabel text="Email Address" fieldKey="primary_guardian_email" />
+                <input
+                  type="email"
+                  value={form.primary_guardian_email || ""}
+                  onChange={(e) => setField("primary_guardian_email", e.target.value)}
+                  className={fieldInputClass(errors, "primary_guardian_email")}
+                />
+              </div>
+            </div>
+
+            <p className="pt-3 border-t border-slate-100 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+              Secondary Guardian (Optional)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <FieldLabel text="Full Name" fieldKey="secondary_guardian_name" />
+                <input
+                  value={form.secondary_guardian_name || ""}
+                  onChange={(e) => setField("secondary_guardian_name", e.target.value)}
+                  className={fieldInputClass(errors, "secondary_guardian_name")}
+                />
+              </div>
+
+              <div>
+                <FieldLabel text="Relationship" fieldKey="secondary_guardian_relationship" />
+                <select
+                  value={form.secondary_guardian_relationship || ""}
+                  onChange={(e) => setField("secondary_guardian_relationship", e.target.value.toLowerCase().trim())}
+                  className={fieldInputClass(errors, "secondary_guardian_relationship")}
+                >
+                  <option value="">Select</option>
+                  {RELATIONSHIP_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel text="Phone Number" fieldKey="secondary_guardian_phone" />
+                <input
+                  value={form.secondary_guardian_phone || ""}
+                  onChange={(e) => setField("secondary_guardian_phone", e.target.value)}
+                  className={fieldInputClass(errors, "secondary_guardian_phone")}
+                />
+              </div>
+
+              <div>
+                <FieldLabel text="Email Address" fieldKey="secondary_guardian_email" />
+                <input
+                  type="email"
+                  value={form.secondary_guardian_email || ""}
+                  onChange={(e) => setField("secondary_guardian_email", e.target.value)}
+                  className={fieldInputClass(errors, "secondary_guardian_email")}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 5. Medical Profile & Documents ── */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 text-xs font-extrabold uppercase tracking-wide text-slate-700">
+            <HeartPulse size={16} className="text-cyan-600" />
+            <span>5. Emergency, Health & Verification Checklist</span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <FieldLabel text="Emergency Contact Name" fieldKey="emergency_contact_name" />
+                <input
+                  value={form.emergency_contact_name || ""}
+                  onChange={(e) => setField("emergency_contact_name", e.target.value)}
+                  className={fieldInputClass(errors, "emergency_contact_name")}
+                />
+              </div>
+
+              <div>
+                <FieldLabel text="Relationship" fieldKey="emergency_contact_relationship" />
+                <input
+                  value={form.emergency_contact_relationship || ""}
+                  onChange={(e) => setField("emergency_contact_relationship", e.target.value)}
+                  className={fieldInputClass(errors, "emergency_contact_relationship")}
+                />
+              </div>
+
+              <div>
+                <FieldLabel text="Emergency Contact Phone" fieldKey="emergency_contact_phone" />
+                <input
+                  value={form.emergency_contact_phone || ""}
+                  onChange={(e) => setField("emergency_contact_phone", e.target.value)}
+                  className={fieldInputClass(errors, "emergency_contact_phone")}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 pt-3 border-t border-slate-100">
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.has_allergies)}
+                    onChange={(e) => setField("has_allergies", e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-cyan-600"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Student Has Known Allergies</span>
+                </label>
+                {form.has_allergies && (
+                  <textarea
+                    rows={2}
+                    value={form.allergies_list || ""}
+                    onChange={(e) => setField("allergies_list", e.target.value)}
+                    placeholder="List specific allergies (e.g. peanuts, dairy)..."
+                    className={fieldInputClass(errors, "allergies_list")}
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.has_medical_conditions)}
+                    onChange={(e) => setField("has_medical_conditions", e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-cyan-600"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Has Chronic Medical Conditions</span>
+                </label>
+                {form.has_medical_conditions && (
+                  <textarea
+                    rows={2}
+                    value={form.medical_conditions || ""}
+                    onChange={(e) => setField("medical_conditions", e.target.value)}
+                    placeholder="Describe condition and medical protocol..."
+                    className={fieldInputClass(errors, "medical_conditions")}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Document Checklist Grid */}
+            <div className="pt-3 border-t border-slate-100">
+              <p className="text-xs font-extrabold uppercase tracking-wide text-slate-700 mb-3">
+                Verified Verification Documents
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  ["Birth Certificate Verified", "docs_birth_certificate"],
+                  ["Immunization / Vaccine Card", "docs_vaccination_card"],
+                  ["Aadhaar Card Copy", "docs_aadhar_card"],
+                  ["Address Proof Verified", "docs_address_proof"],
+                  ["Recent Passport Photograph", "docs_photograph"],
+                ].map(([label, key]) => (
+                  <label
+                    key={key}
+                    className={`flex items-center justify-between rounded-xl border p-3 text-xs font-semibold cursor-pointer transition ${
+                      form[key]
+                        ? "border-emerald-300 bg-emerald-50/50 text-emerald-900"
+                        : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form[key])}
+                      onChange={(e) => setField(key, e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Form Action Buttons ── */}
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+          <Link
+            to="/admin/users"
+            className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </Link>
+
           <button
             type="submit"
-            className="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-700 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-cyan-600/30 hover:from-cyan-500 hover:to-cyan-600 disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save Admission Form"}
+            <Save size={14} />
+            <span>{saving ? "Saving Changes..." : "Save & Update Admission"}</span>
           </button>
-          {Object.keys(errors).length > 0 && (
-            <p className="text-sm text-rose-600">Fields marked with <span className="font-bold">*</span> are required.</p>
-          )}
         </div>
       </form>
-    </section>
+    </div>
   );
 }
 
